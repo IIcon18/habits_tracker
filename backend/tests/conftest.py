@@ -14,7 +14,7 @@ from alembic.config import Config  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
-from app.db import engine  # noqa: E402
+from app.core.database import engine  # noqa: E402
 from app.main import app  # noqa: E402
 
 from .initdata import make_init_data  # noqa: E402

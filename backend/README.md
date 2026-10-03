@@ -2,6 +2,23 @@
 
 FastAPI + PostgreSQL. Проверяет подпись Telegram `initData`, хранит привычки, отметки, паузы и напоминания.
 
+## Структура
+
+```
+app/
+  main.py        приложение FastAPI, перевод доменных ошибок в HTTP-коды
+  core/          config (настройки из .env), database (engine, сессия, Base),
+                 security (проверка подписи initData), exceptions (доменные ошибки)
+  models/        таблицы SQLAlchemy — по файлу на сущность
+  schemas/       Pydantic-схемы запросов и ответов (JSON в camelCase)
+  services/      бизнес-логика: users, habits, marks, reminders, stats (серия и пропуски).
+                 Не знает про HTTP — эти же функции будет вызывать бот
+  api/           deps (сессия, текущий пользователь), routes/ — тонкие роуты, router.py
+alembic/         миграции
+docker/          create-test-db.sql — при первом старте контейнера db создаёт базу kaplya_test для тестов
+tests/
+```
+
 ## Запуск
 
 ```bash
@@ -25,7 +42,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest
 ```
 
-Новая миграция после изменения `app/models.py`: `.venv/bin/alembic revision --autogenerate -m "что изменилось"`.
+Новая миграция после изменения `app/models/`: `.venv/bin/alembic revision --autogenerate -m "что изменилось"`.
 
 ## Разработка без Telegram
 
@@ -55,4 +72,4 @@ Mini App работает только по HTTPS:
 | GET / PUT | `/habits/{id}/reminder` | напоминание `{time, days[1..7], evening}` |
 
 Заголовки: `Authorization: tma <initData>`, `X-Timezone: <IANA>`.
-Логика серии — `app/stats.py`, зеркало `frontend/src/lib/stats.ts`: меняешь одно — меняй и другое.
+Логика серии — `app/services/stats.py`, зеркало `frontend/src/lib/stats.ts`: меняешь одно — меняй и другое.

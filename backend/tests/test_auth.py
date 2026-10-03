@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from app.auth import InvalidInitData, validate_init_data
+from app.core.security import InvalidInitData, validate_init_data
 
 from .initdata import BOT_TOKEN, make_init_data
 

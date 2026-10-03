@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
-from ..auth import CurrentUser
-from ..deps import user_today
-from ..schemas import MeOut
+from app.api.deps import CurrentUser
+from app.schemas import MeOut
+from app.services.users import user_today
 
-router = APIRouter()
+router = APIRouter(tags=["me"])
 
 
 @router.get("/me", response_model=MeOut)

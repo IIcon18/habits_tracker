@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from app.stats import Pause, compute_stats
+from app.services.stats import Pause, compute_stats
 
 TODAY = date(2026, 10, 2)
 
