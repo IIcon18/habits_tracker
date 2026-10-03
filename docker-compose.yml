@@ -29,6 +29,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Telegram-бот: напоминания и кнопки в чате. Тот же образ, что у API.
+  bot:
+    build: ./backend
+    command: ["python", "-m", "app.bot"]
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      WEBAPP_URL: ${WEBAPP_URL:-}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-kaplya}:${POSTGRES_PASSWORD:-kaplya}@db:5432/${POSTGRES_DB:-kaplya}
+    depends_on:
+      # API при старте применяет миграции — бот ждёт, пока он поднимется.
+      api:
+        condition: service_healthy
+    restart: on-failure
 
 volumes:
   pgdata:

@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     bot_token: str = ""
+    # HTTPS-адрес Mini App (туннель или сервер): кнопка меню бота и «Открыть Каплю».
+    webapp_url: str = ""
     database_url: str = "postgresql+asyncpg://kaplya:kaplya@localhost:5433/kaplya"
     cors_origins: list[str] = []
 

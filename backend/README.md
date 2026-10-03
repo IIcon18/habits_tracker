@@ -14,6 +14,8 @@ app/
   services/      бизнес-логика: users, habits, marks, reminders, stats (серия и пропуски).
                  Не знает про HTTP — эти же функции будет вызывать бот
   api/           deps (сессия, текущий пользователь), routes/ — тонкие роуты, router.py
+  bot/           Telegram-бот (aiogram): texts — тексты из design/09-bot.md, keyboards, handlers
+                 (/start, кнопки «Сделал» / «2 минуты» / «Отменить»), scheduler — напоминания
 alembic/         миграции
 tests/
 ```
@@ -22,7 +24,7 @@ tests/
 
 ```bash
 cp .env.example .env          # из корня проекта; впиши BOT_TOKEN
-docker compose up -d          # Postgres на :5433, API на :8001 (миграции применяются сами)
+docker compose up -d          # Postgres на :5433, API на :8001 (миграции применяются сами), бот
 curl localhost:8001/health
 ```
 
@@ -53,8 +55,31 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 Mini App работает только по HTTPS:
 
 1. `cd frontend && npm run dev`, затем туннель: `cloudflared tunnel --url http://localhost:5173` (или `ngrok http 5173`).
-2. В @BotFather: `/mybots` → бот → Bot Settings → Menu Button → URL туннеля.
+2. Адрес туннеля — в `.env` как `WEBAPP_URL`, затем `docker compose up -d bot` (перезапуск подхватит адрес).
+   Бот сам поставит кнопку меню «Капля» — в @BotFather ничего настраивать не нужно.
 3. `BOT_TOKEN` в `.env` должен быть от этого же бота, иначе подпись не сойдётся (401).
+4. Напиши боту `/start` — без этого Telegram не разрешит ему присылать напоминания.
+
+## Бот
+
+- Работает через polling: сам забирает обновления у Telegram, входящий адрес не нужен.
+- Раз в минуту проверяет напоминания по часовому поясу каждого пользователя: утреннее — во время
+  из настроек, вечернее — в 21:00, если за день нет отметки; после двух пропусков — сообщение
+  «Два дня без капли» с кнопками в обратном порядке. Дата отправки хранится в `reminders.last_*_on`:
+  дважды не придёт, а если бот был выключен, догонит в течение часа.
+- Кнопки «Сделал» / «2 минуты» / «Отменить» вызывают те же сервисы, что и API.
+- Если Telegram отвечает 403 (человек не нажимал /start или заблокировал бота) — `users.allows_write = false`,
+  напоминания ему не шлются до следующего /start.
+- Логи: `docker compose logs -f bot`.
+
+Пока в приложении нет экрана напоминания (6.1), напоминание можно включить запросом:
+
+```bash
+curl -X PUT localhost:8001/api/habits/<id>/reminder -H 'Content-Type: application/json' \
+  -d '{"time": "07:45", "days": [1,2,3,4,5,6,7], "evening": true}'
+```
+
+(с `DEBUG=1` и `DEV_USER_ID` = твоему Telegram id; id привычки — из `curl localhost:8001/api/habits`).
 
 ## API (`/api`, JSON в camelCase)
 
