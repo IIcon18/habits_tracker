@@ -1,0 +1,153 @@
+/* DayRow / DayCell — design/04-components.md, анимация — design/06-motion.md. */
+
+.day-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+}
+
+/* На узких экранах (до 360px) 14 ячеек по 18px не помещаются с зазором. */
+@media (max-width: 359px) {
+  .day-row {
+    --day-cell: 15px;
+  }
+}
+
+.day-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  color: var(--ink-muted);
+}
+
+.day {
+  position: relative;
+  display: block;
+  flex: none;
+  width: var(--day-cell);
+  height: var(--day-cell);
+  border-radius: 50%;
+}
+
+.day__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.day--full .day__fill {
+  background: var(--accent);
+}
+
+.day--mini .day__fill {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.day--miss .day__fill {
+  inset: 6px;
+  background: var(--ink-muted);
+  opacity: 0.6;
+}
+
+.day--miss2 .day__fill {
+  inset: 5px;
+  background: var(--amber);
+}
+
+.day--today-empty .day__fill {
+  border: 1.5px dashed var(--ink-muted);
+}
+
+.day--before .day__fill {
+  border: 1.5px solid var(--mark-empty);
+}
+
+.day--today {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Капля: падает → ячейка наполняется → расходится круг (≈0.8 с). */
+.day__drop {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  background: var(--accent);
+  border-radius: 0 50% 50% 50%;
+  transform: rotate(45deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.day__ripple {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.day--just .day__drop {
+  animation: drop-fall 0.46s cubic-bezier(0.55, 0, 0.9, 0.4) both;
+}
+
+.day--just .day__fill {
+  animation: drop-fill 0.32s 0.42s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+
+.day--just .day__ripple {
+  animation: drop-ripple 0.7s 0.44s ease-out both;
+}
+
+@keyframes drop-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(-34px) rotate(45deg) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+    transform: translateY(6px) rotate(45deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(9px) rotate(45deg) scale(0.4);
+  }
+}
+
+@keyframes drop-fill {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes drop-ripple {
+  from {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day--just .day__drop,
+  .day--just .day__ripple,
+  .day--just .day__fill {
+    animation: none;
+  }
+}

@@ -1,0 +1,156 @@
+/* HabitCard, MarkButtons, MarkDone — design/04-components.md, эталон screens/3.1. */
+
+.habit-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 18px 18px var(--space-4);
+}
+
+.habit-card__plan {
+  margin-top: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.habit-card__plan b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.habit-card__meta {
+  display: flex;
+  gap: 14px;
+  margin-top: var(--space-3);
+}
+
+.habit-card__meta span + span {
+  color: var(--ink-muted);
+}
+
+.habit-card__note {
+  margin-top: 10px;
+  font: 500 14px/1.4 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.habit-card__warn {
+  margin-top: var(--space-3);
+  padding: var(--space-3) 14px;
+  border-radius: 14px;
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+  font: 600 14px/1.4 var(--font-text);
+}
+
+.habit-card__warn span {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.mark-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: 14px;
+}
+
+.mark-button {
+  height: var(--tap-min);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-md);
+  transition: transform 0.1s;
+}
+
+.mark-button:active {
+  transform: scale(0.98);
+}
+
+.mark-button--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.mark-button--secondary {
+  background: var(--accent-soft);
+  color: var(--on-accent-soft);
+}
+
+.mark-done {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--tap-min);
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.mark-done--just {
+  animation: mark-done-in 0.35s 0.5s both;
+}
+
+.mark-done__title {
+  display: block;
+  font: 700 15px/1.3 var(--font-text);
+}
+
+.mark-done__caption {
+  display: block;
+  color: var(--ink-muted);
+}
+
+.mark-done__undo {
+  min-width: var(--tap-small);
+  min-height: var(--tap-small);
+  padding-left: 14px;
+  color: var(--accent-ink);
+  font: 700 14px/1 var(--font-text);
+}
+
+@keyframes mark-done-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark-done--just {
+    animation: none;
+  }
+}
+
+/* Карточка на паузе — компактная, обводка без заливки (экран 1.4). */
+.paused-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 18px 18px var(--space-4);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.paused-card__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.paused-card__meta {
+  margin-top: 6px;
+  font: 500 14px/1.3 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.paused-card__btn {
+  flex: none;
+  height: var(--tap-small);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--on-accent-soft);
+}

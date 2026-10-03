@@ -1,0 +1,65 @@
+/* DayHeader — шапка дня с водой (design/04-components.md, 06-motion.md). */
+
+.day-header {
+  position: relative;
+  height: 104px;
+  padding: 14px var(--space-5) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.day-header__water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--accent-soft);
+  transition: height 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+
+.day-header__wave {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  display: block;
+  width: 100%;
+  height: 10px;
+  fill: var(--accent-soft);
+}
+
+.day-header__date,
+.day-header__progress {
+  position: relative;
+}
+
+.day-header__weekday,
+.day-header__label {
+  display: block;
+  color: var(--ink-on-water);
+}
+
+.day-header__date .t-date {
+  margin-top: 2px;
+}
+
+.day-header__progress {
+  padding-top: 2px;
+  text-align: right;
+}
+
+.day-header__progress .t-numeral {
+  display: block;
+}
+
+.day-header__label {
+  font: 600 13px/1.3 var(--font-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-header__water {
+    transition: none;
+  }
+}
