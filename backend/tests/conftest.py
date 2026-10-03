@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 # До импорта приложения: тестовая база и токен бота.
@@ -12,7 +13,8 @@ import pytest  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
-from sqlalchemy import text  # noqa: E402
+from sqlalchemy import make_url, text  # noqa: E402
+from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
 from app.core.database import engine  # noqa: E402
 from app.main import app  # noqa: E402
@@ -22,9 +24,25 @@ from .initdata import make_init_data  # noqa: E402
 HERE = os.path.dirname(__file__)
 
 
+async def ensure_test_database() -> None:
+    """Создаёт тестовую базу, если её нет. Подключаемся к служебной базе postgres,
+    которая есть в любом Postgres: из той базы, которую создаём, это сделать нельзя."""
+    url = make_url(os.environ["TEST_DATABASE_URL"])
+    # CREATE DATABASE не работает внутри транзакции — нужен AUTOCOMMIT.
+    admin = create_async_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT")
+    try:
+        async with admin.connect() as conn:
+            exists = await conn.scalar(text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": url.database})
+            if not exists:
+                await conn.execute(text(f'CREATE DATABASE "{url.database}"'))
+    finally:
+        await admin.dispose()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def migrated_db():
     """Схема создаётся настоящей миграцией — заодно проверяем её."""
+    asyncio.run(ensure_test_database())
     cfg = Config(os.path.join(HERE, "..", "alembic.ini"))
     command.downgrade(cfg, "base")
     command.upgrade(cfg, "head")

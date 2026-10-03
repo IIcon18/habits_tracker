@@ -15,7 +15,6 @@ app/
                  Не знает про HTTP — эти же функции будет вызывать бот
   api/           deps (сессия, текущий пользователь), routes/ — тонкие роуты, router.py
 alembic/         миграции
-docker/          create-test-db.sql — при первом старте контейнера db создаёт базу kaplya_test для тестов
 tests/
 ```
 
@@ -36,7 +35,7 @@ python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/uvicorn app.main:app --reload --port 8001
 ```
 
-Тесты (база `kaplya_test` создаётся контейнером `db` автоматически):
+Тесты (нужен запущенный `db`; тестовую базу `kaplya_test` тесты создают сами, если её нет):
 
 ```bash
 .venv/bin/pytest
