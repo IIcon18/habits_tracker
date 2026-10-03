@@ -13,7 +13,7 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["vite/client", "telegram-web-app"]
+    "types": ["vite/client", "telegram-web-app", "node"]
   },
   "include": ["src", "vite.config.ts"]
 }

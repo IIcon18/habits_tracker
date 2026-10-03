@@ -10,10 +10,25 @@ export interface Habit {
   mini: string;
   /** Якорь без префикса: «налью утренний кофе» → «После того как налью утренний кофе». */
   anchor: string;
-  reward?: string;
+  reward?: string | null;
   status: 'active' | 'paused';
-  pausedAt?: ISODate;
+  /** Интервалы паузы [start, end); end = null — пауза идёт. Дни на паузе не пропуски. */
+  pauses: Pause[];
   createdAt: ISODate;
+  reminder?: Reminder | null;
+}
+
+export interface Pause {
+  start: ISODate;
+  end: ISODate | null;
+}
+
+export interface Reminder {
+  /** «07:45» */
+  time: string;
+  /** 1 (пн) … 7 (вс) */
+  days: number[];
+  evening: boolean;
 }
 
 export interface Mark {

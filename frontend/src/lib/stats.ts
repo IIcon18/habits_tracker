@@ -22,13 +22,14 @@ export const ROW_LENGTH = 14;
  * Правила из design/01-product.md:
  * голоса — все отметки; один пропуск не обнуляет серию, но и не добавляет к ней;
  * два пропуска подряд обнуляют серию; дни на паузе не считаются пропусками.
+ * Та же логика на сервере — backend/app/stats.py; меняешь здесь — поменяй и там.
  */
 export function computeStats(habit: Habit, marks: Mark[], today: ISODate): HabitStats {
   const byDate = new Map<ISODate, MarkKind>();
   for (const m of marks) if (m.habitId === habit.id) byDate.set(m.date, m.kind);
 
-  const isTracked = (d: ISODate) =>
-    d >= habit.createdAt && (habit.status !== 'paused' || !habit.pausedAt || d < habit.pausedAt);
+  const onPause = (d: ISODate) => habit.pauses.some((p) => p.start <= d && (p.end === null || d < p.end));
+  const isTracked = (d: ISODate) => d >= habit.createdAt && !onPause(d);
   const isMiss = (d: ISODate) => d < today && isTracked(d) && !byDate.has(d);
 
   let streak = 0;

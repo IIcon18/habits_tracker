@@ -68,8 +68,18 @@ export function Wizard() {
     haptic.selection();
     navigate(`/new/${step + 1}`);
   };
-  const create = (withReward: boolean) => {
-    createFromDraft(withReward);
+  const saving = useRef(false);
+  const create = async (withReward: boolean) => {
+    if (saving.current) return;
+    saving.current = true;
+    try {
+      await createFromDraft(withReward);
+    } catch {
+      haptic.error();
+      return;
+    } finally {
+      saving.current = false;
+    }
     created.current = true;
     haptic.success();
     navigate('/today', { replace: true });
@@ -159,7 +169,7 @@ export function Wizard() {
 function DraftPreview({ draft }: { draft: Draft }) {
   const today = todayISO();
   const habit = useMemo<Habit>(
-    () => ({ id: 'draft', ...draft, status: 'active', createdAt: today }),
+    () => ({ id: 'draft', ...draft, status: 'active', pauses: [], createdAt: today }),
     [draft, today],
   );
   const stats = useMemo(() => computeStats(habit, [], today), [habit, today]);

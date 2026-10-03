@@ -27,3 +27,12 @@
   font: 700 15px/1 var(--font-text);
   text-decoration: none;
 }
+
+.today__error {
+  padding: var(--space-8) var(--space-5);
+  color: var(--ink-muted);
+}
+
+.today__error .today__add {
+  margin: var(--space-2) 0 0;
+}

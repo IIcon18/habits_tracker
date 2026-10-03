@@ -17,8 +17,8 @@ function marksFrom(habitId: string, createdAt: string, pattern: string): Mark[] 
   return marks;
 }
 
-function habit(id: string, fields: Omit<Habit, 'id' | 'status'>, status: Habit['status'] = 'active'): Habit {
-  return { id, status, ...fields };
+function habit(id: string, fields: Omit<Habit, 'id' | 'status' | 'pauses'>): Habit {
+  return { id, status: 'active', pauses: [], ...fields };
 }
 
 export function loadDemo(): { habits: Habit[]; marks: Mark[] } {
@@ -54,7 +54,7 @@ export function loadDemo(): { habits: Habit[]; marks: Mark[] } {
   if (scenario === 'paused') {
     const pausedAt = addDays(today, -4);
     return {
-      habits: [read, { ...move, status: 'paused', pausedAt }],
+      habits: [read, { ...move, status: 'paused', pauses: [{ start: pausedAt, end: null }] }],
       marks: [...readMarks, ...moveMarks.filter((m) => m.date < pausedAt)],
     };
   }

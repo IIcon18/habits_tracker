@@ -1,11 +1,16 @@
 /**
  * Состояние приложения: привычки, отметки и черновик создания.
- * Пока всё в памяти на демо-данных; позже здесь будут запросы к бэкенду
- * и сохранение черновика в Telegram CloudStorage (design/07-telegram.md).
+ *
+ * Источник данных — API бэкенда (внутри Telegram или при VITE_USE_API=1),
+ * иначе демо-данные из demo.ts (для вёрстки в браузере; ?demo=… тоже включает демо).
+ * Отметки оптимистичные: карточка обновляется сразу, при ошибке сервера откатывается.
+ * TODO: черновик — в Telegram CloudStorage; отметки без сети — в очередь (экран 9.2).
  */
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api } from './api';
 import { todayISO } from './date';
 import { loadDemo } from './demo';
+import { haptic, insideTelegram } from './telegram';
 import type { Habit, Mark, MarkKind } from './types';
 
 export interface Draft {
@@ -18,58 +23,134 @@ export interface Draft {
 
 export const emptyDraft: Draft = { identity: '', full: '', mini: '', anchor: '', reward: '' };
 
-interface Store {
+const demoMode =
+  new URLSearchParams(location.search).has('demo') || !(insideTelegram || import.meta.env.VITE_USE_API === '1');
+
+interface Data {
   habits: Habit[];
   marks: Mark[];
+}
+
+interface Store extends Data {
+  /** false, пока привычки грузятся с сервера. */
+  loaded: boolean;
+  /** Не удалось загрузить привычки. */
+  loadError: boolean;
   mark: (habitId: string, kind: MarkKind) => void;
   undo: (habitId: string) => void;
   resume: (habitId: string) => void;
   draft: Draft;
   updateDraft: (patch: Partial<Draft>) => void;
   /** Создаёт привычку из черновика. Черновик не трогает — его очищает resetDraft. */
-  createFromDraft: (withReward: boolean) => Habit;
+  createFromDraft: (withReward: boolean) => Promise<Habit>;
   resetDraft: () => void;
 }
 
 const StoreContext = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [{ habits, marks }, setData] = useState(loadDemo);
+  const [data, setData] = useState<Data>(() => (demoMode ? loadDemo() : { habits: [], marks: [] }));
+  const [loaded, setLoaded] = useState(demoMode);
+  const [loadError, setLoadError] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+
+  useEffect(() => {
+    if (demoMode) return;
+    api.habits().then(
+      (d) => {
+        setData(d);
+        setLoaded(true);
+      },
+      () => setLoadError(true),
+    );
+  }, []);
 
   const store = useMemo<Store>(() => {
     const today = todayISO();
+
+    /** Заменить привычку и её отметки ответом сервера. */
+    const replaceHabit = (habit: Habit, marks: Mark[]) =>
+      setData((d) => ({
+        habits: d.habits.some((h) => h.id === habit.id)
+          ? d.habits.map((h) => (h.id === habit.id ? habit : h))
+          : [...d.habits, habit],
+        marks: [...d.marks.filter((m) => m.habitId !== habit.id), ...marks],
+      }));
+    const addMark = (mark: Mark) => setData((d) => ({ ...d, marks: [...d.marks, mark] }));
+    const removeMark = (habitId: string) =>
+      setData((d) => ({ ...d, marks: d.marks.filter((m) => !(m.habitId === habitId && m.date === today)) }));
+
     return {
-      habits,
-      marks,
-      mark: (habitId, kind) =>
-        setData((d) => ({ ...d, marks: [...d.marks, { habitId, date: today, kind, at: Date.now() }] })),
-      undo: (habitId) =>
-        setData((d) => ({ ...d, marks: d.marks.filter((m) => !(m.habitId === habitId && m.date === today)) })),
-      resume: (habitId) =>
-        setData((d) => ({
-          ...d,
-          habits: d.habits.map((h) => (h.id === habitId ? { ...h, status: 'active', pausedAt: undefined } : h)),
-        })),
+      ...data,
+      loaded,
+      loadError,
       draft,
+
+      mark: (habitId, kind) => {
+        const mark: Mark = { habitId, date: today, kind, at: Date.now() };
+        addMark(mark);
+        if (demoMode) return;
+        api.mark(habitId, today, kind, mark.at).catch(() => {
+          // TODO: тост «Отметка не сохранилась» с «Повторить» (экран 9.3).
+          removeMark(habitId);
+          haptic.error();
+        });
+      },
+
+      undo: (habitId) => {
+        const prev = data.marks.find((m) => m.habitId === habitId && m.date === today);
+        removeMark(habitId);
+        if (demoMode || !prev) return;
+        api.unmark(habitId, today).catch(() => {
+          addMark(prev);
+          haptic.error();
+        });
+      },
+
+      resume: (habitId) => {
+        if (demoMode) {
+          setData((d) => ({
+            ...d,
+            habits: d.habits.map((h) =>
+              h.id === habitId
+                ? { ...h, status: 'active', pauses: h.pauses.map((p) => (p.end === null ? { ...p, end: today } : p)) }
+                : h,
+            ),
+          }));
+          return;
+        }
+        api.resume(habitId).then(({ habit, marks }) => replaceHabit(habit, marks), haptic.error);
+      },
+
       updateDraft: (patch) => setDraft((d) => ({ ...d, ...patch })),
-      createFromDraft: (withReward) => {
-        const habit: Habit = {
-          id: crypto.randomUUID(),
+
+      createFromDraft: async (withReward) => {
+        const input = {
           identity: draft.identity.trim(),
           full: draft.full.trim(),
           mini: draft.mini.trim(),
           anchor: draft.anchor.trim(),
-          reward: withReward && draft.reward.trim() ? draft.reward.trim() : undefined,
-          status: 'active',
-          createdAt: today,
+          reward: withReward && draft.reward.trim() ? draft.reward.trim() : null,
         };
-        setData((d) => ({ ...d, habits: [...d.habits, habit] }));
+        if (demoMode) {
+          const habit: Habit = {
+            id: crypto.randomUUID(),
+            ...input,
+            status: 'active',
+            pauses: [],
+            createdAt: today,
+          };
+          replaceHabit(habit, []);
+          return habit;
+        }
+        const { habit, marks } = await api.create(input);
+        replaceHabit(habit, marks);
         return habit;
       },
+
       resetDraft: () => setDraft(emptyDraft),
     };
-  }, [habits, marks, draft]);
+  }, [data, loaded, loadError, draft]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

@@ -11,7 +11,7 @@ import './Today.css';
 
 export function Today() {
   const today = todayISO();
-  const { habits, marks, mark, undo, resume } = useStore();
+  const { habits, marks, loaded, loadError, mark, undo, resume } = useStore();
   /** Привычка, отмеченная только что, — для анимации капли. */
   const [justMarked, setJustMarked] = useState<string | null>(null);
 
@@ -24,6 +24,17 @@ export function Today() {
   );
   const doneToday = active.filter((h) => stats.get(h.id)!.todayMark).length;
 
+  if (loadError) {
+    return (
+      <main className="today__error">
+        <p className="t-body">Похоже, сервер не ответил.</p>
+        <button type="button" className="today__add" onClick={() => location.reload()}>
+          Повторить
+        </button>
+      </main>
+    );
+  }
+  if (!loaded) return null;
   // TODO: пустое состояние 2.4; пока сразу ведём в мастер.
   if (habits.length === 0) return <Navigate to="/new/1" replace />;
 
@@ -31,7 +42,6 @@ export function Today() {
     haptic.tap();
     mark(habitId, kind);
     setJustMarked(habitId);
-    // TODO: отправка на сервер; при ошибке — откат и тост 9.3.
     haptic.success();
   }
 
@@ -66,7 +76,7 @@ export function Today() {
                 key={h.id}
                 habit={h}
                 votes={stats.get(h.id)!.votes}
-                pausedLabel={h.pausedAt ? dayMonthLabel(h.pausedAt) : ''}
+                pausedLabel={dayMonthLabel(h.pauses.find((p) => p.end === null)?.start ?? today)}
                 onResume={() => resume(h.id)}
               />
             ))}

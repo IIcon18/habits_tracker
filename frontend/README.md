@@ -18,4 +18,6 @@ npm run build      # проверка типов + сборка в dist/
 (`src/lib/tgButtons.tsx`). Вне Telegram MainButton и SecondaryButton имитирует нижняя панель —
 только для разработки, внутри Telegram её нет.
 
-Данные пока демонстрационные (`src/lib/demo.ts`), подсказка ИИ — заглушка (`src/lib/ai.ts`), без бэкенда.
+Данные: внутри Telegram — API бэкенда (`src/lib/api.ts`, см. `backend/README.md`).
+В браузере по умолчанию — демо-данные (`src/lib/demo.ts`); с бэкендом — `VITE_USE_API=1 npm run dev`
+(бэкенд с `DEBUG=1` и `DEV_USER_ID`). Подсказка ИИ пока заглушка (`src/lib/ai.ts`).

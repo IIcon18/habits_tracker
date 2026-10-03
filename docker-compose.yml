@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kaplya}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kaplya}
+      POSTGRES_DB: ${POSTGRES_DB:-kaplya}
+    ports:
+      # 5433 снаружи, чтобы не конфликтовать с локальным Postgres.
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Отдельная база для тестов бэкенда.
+      - ./backend/docker/create-test-db.sql:/docker-entrypoint-initdb.d/create-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    # Значения подставляются из .env в корне проекта (см. .env.example).
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:-}
+      DEBUG: ${DEBUG:-0}
+      DEV_USER_ID: ${DEV_USER_ID:-}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-kaplya}:${POSTGRES_PASSWORD:-kaplya}@db:5432/${POSTGRES_DB:-kaplya}
+    ports:
+      - "${API_PORT:-8001}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
