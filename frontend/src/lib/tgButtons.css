@@ -1,0 +1,41 @@
+/* Только для разработки вне Telegram: имитация нижней панели с MainButton/SecondaryButton. */
+
+.dev-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  gap: var(--space-2);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  background: var(--ground);
+  border-top: 1px solid var(--line);
+}
+
+.dev-bar__btn {
+  flex: 1;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.dev-bar__btn--secondary {
+  flex: 0.7;
+  background: var(--accent-soft);
+  color: var(--on-accent-soft);
+}
+
+.dev-bar__btn--off {
+  background: var(--surface-sunk);
+  color: var(--ink-muted);
+  cursor: default;
+}
+
+/* Место под панель, чтобы она не перекрывала контент. */
+body:has(.dev-bar) .app {
+  padding-bottom: 84px;
+}
