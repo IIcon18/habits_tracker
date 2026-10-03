@@ -10,11 +10,13 @@ interface HabitCardProps {
   stats: HabitStats;
   /** Отметка сделана только что — проиграть каплю и появление MarkDone. */
   justMarked: boolean;
-  onMark: (kind: MarkKind) => void;
-  onUndo: () => void;
+  onMark?: (kind: MarkKind) => void;
+  onUndo?: () => void;
+  /** Превью в мастере (5.4): без шкалы и кнопок. */
+  preview?: boolean;
 }
 
-export function HabitCard({ habit, stats, justMarked, onMark, onUndo }: HabitCardProps) {
+export function HabitCard({ habit, stats, justMarked, onMark, onUndo, preview }: HabitCardProps) {
   const { votes, streak, missState, todayMark } = stats;
   const twoMisses = missState === 'two';
 
@@ -22,12 +24,12 @@ export function HabitCard({ habit, stats, justMarked, onMark, onUndo }: HabitCar
     <article className="habit-card">
       <h2 className="t-identity">Я человек, который {habit.identity}</h2>
       <p className="habit-card__plan t-body">
-        {habit.anchor} — <b>{habit.full}</b>
+        После того как {habit.anchor} — <b>{habit.full}</b>
         <br />
         или хотя бы {habit.mini}
       </p>
 
-      <DayRow days={stats.days} justMarked={justMarked} />
+      <DayRow days={stats.days} justMarked={justMarked} showScale={!preview} />
 
       <div className="habit-card__meta t-meta">
         {votes === 0 ? (
@@ -52,7 +54,7 @@ export function HabitCard({ habit, stats, justMarked, onMark, onUndo }: HabitCar
         </div>
       )}
 
-      {todayMark ? (
+      {preview ? null : todayMark ? (
         <div className={`mark-done${justMarked ? ' mark-done--just' : ''}`}>
           <div>
             <span className="mark-done__title">
@@ -70,14 +72,14 @@ export function HabitCard({ habit, stats, justMarked, onMark, onUndo }: HabitCar
           <button
             type="button"
             className={`mark-button t-button mark-button--${twoMisses ? 'secondary' : 'primary'}`}
-            onClick={() => onMark('full')}
+            onClick={() => onMark?.('full')}
           >
             Сделал
           </button>
           <button
             type="button"
             className={`mark-button t-button mark-button--${twoMisses ? 'primary' : 'secondary'}`}
-            onClick={() => onMark('mini')}
+            onClick={() => onMark?.('mini')}
           >
             Хотя бы 2 минуты
           </button>

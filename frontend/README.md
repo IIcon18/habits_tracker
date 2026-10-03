@@ -12,4 +12,10 @@ npm run build      # проверка типов + сборка в dist/
 - `?theme=light` — светлая тема (в Telegram тема берётся из `colorScheme`);
 - `?demo=paused` — экран 1.4, `?demo=two` — два пропуска подряд, `?demo=new` — новая привычка.
 
-Данные пока демонстрационные (`src/lib/demo.ts`), без бэкенда.
+Маршруты (HashRouter): `#/today` — «Сегодня», `#/new/1…4` — мастер создания.
+
+Системные кнопки Telegram объявляются хуками `useMainButton` / `useSecondaryButton` / `useBackButton`
+(`src/lib/tgButtons.tsx`). Вне Telegram MainButton и SecondaryButton имитирует нижняя панель —
+только для разработки, внутри Telegram её нет.
+
+Данные пока демонстрационные (`src/lib/demo.ts`), подсказка ИИ — заглушка (`src/lib/ai.ts`), без бэкенда.

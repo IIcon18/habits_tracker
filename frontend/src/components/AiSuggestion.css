@@ -1,0 +1,115 @@
+.ai {
+  margin-top: var(--space-3);
+  padding: 14px 14px var(--space-3);
+  border-radius: 18px;
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 1.5px var(--accent-soft);
+}
+
+.ai__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: 700 13px/1.2 var(--font-text);
+  color: var(--accent-ink);
+}
+
+/* Тот же знак, что у «двух минут»: заливка accent-soft + кольцо accent. */
+.ai__mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.ai__for {
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.ai__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-3);
+}
+
+.ai__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px var(--space-3) 10px 14px;
+  border-radius: var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+  font: 600 15px/1.35 var(--font-text);
+  text-align: left;
+}
+
+.ai__option small {
+  flex: none;
+  font: 700 13px/1 var(--font-text);
+  color: var(--accent-ink);
+}
+
+.ai__option--on,
+.ai__option--on small {
+  background: var(--accent-soft);
+  color: var(--on-accent-soft);
+}
+
+.ai__placeholder {
+  display: block;
+  height: 44px;
+  border-radius: var(--space-3);
+  background: linear-gradient(90deg, var(--surface) 0 40%, var(--surface-raised) 50%, var(--surface) 60% 100%);
+  background-size: 300% 100%;
+  animation: ai-shimmer 1.4s linear infinite;
+}
+
+@keyframes ai-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.ai__foot {
+  margin-top: 10px;
+  font: 500 12px/1.3 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.ai__foot--row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.ai__more {
+  flex: none;
+  min-height: var(--tap-small);
+  padding-left: var(--space-2);
+  font: 700 13px/1 var(--font-text);
+  color: var(--accent-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai__placeholder {
+    animation: none;
+  }
+}

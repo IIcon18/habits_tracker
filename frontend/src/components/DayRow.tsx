@@ -31,9 +31,10 @@ const LABELS: Record<DayState, string> = {
 interface DayRowProps {
   days: DayState[];
   justMarked?: boolean;
+  showScale?: boolean;
 }
 
-export function DayRow({ days, justMarked }: DayRowProps) {
+export function DayRow({ days, justMarked, showScale = true }: DayRowProps) {
   const last = days.length - 1;
   const summary = `Последние 2 недели: ${days.map((d) => LABELS[d]).join(', ')}`;
   return (
@@ -43,10 +44,12 @@ export function DayRow({ days, justMarked }: DayRowProps) {
           <DayCell key={i} state={state} today={i === last} just={i === last && justMarked} />
         ))}
       </div>
-      <div className="day-scale t-scale" aria-hidden="true">
-        <span>2 недели назад</span>
-        <span>сегодня</span>
-      </div>
+      {showScale && (
+        <div className="day-scale t-scale" aria-hidden="true">
+          <span>2 недели назад</span>
+          <span>сегодня</span>
+        </div>
+      )}
     </>
   );
 }

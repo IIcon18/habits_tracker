@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router';
 import { DayHeader } from '../components/DayHeader';
 import { HabitCard, PausedCard } from '../components/HabitCard';
 import { dayMonthLabel, todayISO } from '../lib/date';
-import { loadDemo } from '../lib/demo';
 import { computeStats } from '../lib/stats';
+import { useStore } from '../lib/store';
 import { haptic } from '../lib/telegram';
-import type { Habit, Mark, MarkKind } from '../lib/types';
+import type { MarkKind } from '../lib/types';
 import './Today.css';
 
 export function Today() {
   const today = todayISO();
-  const [{ habits, marks }, setData] = useState(loadDemo);
+  const { habits, marks, mark, undo, resume } = useStore();
   /** Привычка, отмеченная только что, — для анимации капли. */
   const [justMarked, setJustMarked] = useState<string | null>(null);
 
@@ -23,25 +24,20 @@ export function Today() {
   );
   const doneToday = active.filter((h) => stats.get(h.id)!.todayMark).length;
 
-  function mark(habit: Habit, kind: MarkKind) {
+  // TODO: пустое состояние 2.4; пока сразу ведём в мастер.
+  if (habits.length === 0) return <Navigate to="/new/1" replace />;
+
+  function onMark(habitId: string, kind: MarkKind) {
     haptic.tap();
-    const next: Mark = { habitId: habit.id, date: today, kind, at: Date.now() };
-    setData((d) => ({ ...d, marks: [...d.marks, next] }));
-    setJustMarked(habit.id);
+    mark(habitId, kind);
+    setJustMarked(habitId);
     // TODO: отправка на сервер; при ошибке — откат и тост 9.3.
     haptic.success();
   }
 
-  function undo(habit: Habit) {
-    setData((d) => ({ ...d, marks: d.marks.filter((m) => !(m.habitId === habit.id && m.date === today)) }));
-    if (justMarked === habit.id) setJustMarked(null);
-  }
-
-  function resume(habit: Habit) {
-    setData((d) => ({
-      ...d,
-      habits: d.habits.map((h) => (h.id === habit.id ? { ...h, status: 'active', pausedAt: undefined } : h)),
-    }));
+  function onUndo(habitId: string) {
+    undo(habitId);
+    if (justMarked === habitId) setJustMarked(null);
   }
 
   return (
@@ -55,8 +51,8 @@ export function Today() {
             habit={h}
             stats={stats.get(h.id)!}
             justMarked={justMarked === h.id}
-            onMark={(kind) => mark(h, kind)}
-            onUndo={() => undo(h)}
+            onMark={(kind) => onMark(h.id, kind)}
+            onUndo={() => onUndo(h.id)}
           />
         ))}
       </div>
@@ -71,7 +67,7 @@ export function Today() {
                 habit={h}
                 votes={stats.get(h.id)!.votes}
                 pausedLabel={h.pausedAt ? dayMonthLabel(h.pausedAt) : ''}
-                onResume={() => resume(h)}
+                onResume={() => resume(h.id)}
               />
             ))}
           </div>
@@ -81,11 +77,16 @@ export function Today() {
         </>
       )}
 
-      {paused.length === 0 && active.length >= 2 && (
+      {paused.length === 0 && active.length === 2 && (
         <p className="today__foot">
           Двух привычек хватает, чтобы заметить сдвиг. Третью добавь, когда эти станут привычными.
         </p>
       )}
+
+      {/* TODO: при трёх активных — лист лимита 9.1 вместо перехода. */}
+      <Link className="today__add" to="/new/1">
+        Добавить привычку
+      </Link>
     </main>
   );
 }
