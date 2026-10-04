@@ -1,6 +1,3 @@
 node_modules/
 dist/
 *.tsbuildinfo
-
-# корневой .gitignore (шаблон Python) игнорирует lib/ — для фронтенда это исходники
-!src/lib/

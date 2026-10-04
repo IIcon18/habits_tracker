@@ -1,0 +1,25 @@
+# DOMAIN — из .env (см. docker-compose.prod.yml). Сертификат Let's Encrypt Caddy выпускает сам.
+{$DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		# У файлов из assets/ хеш в имени — можно кешировать навсегда.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		# index.html не кешируем, чтобы Telegram сразу подхватывал новую сборку.
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		# SPA: неизвестные пути отдаём index.html, дальше разбирается роутер.
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
