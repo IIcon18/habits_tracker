@@ -40,8 +40,10 @@ def stats_line(stats: HabitStats) -> str:
 
 
 def _render(habit: Habit, stats: HabitStats, line: str) -> str:
-    return "\n".join(
-        [f"<b>Я человек, который {escape(habit.identity)}</b>", line, day_row(stats), stats_line(stats)]
+    # Ряд дней и статистика — в цитате: Telegram выделяет её полоской цвета акцента.
+    return (
+        f"<b>Я человек, который {escape(habit.identity)}</b>\n{line}\n"
+        f"<blockquote>{day_row(stats)}\n{stats_line(stats)}</blockquote>"
     )
 
 

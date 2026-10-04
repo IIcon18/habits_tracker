@@ -37,8 +37,8 @@ def test_morning():
     assert lines == [
         "<b>Я человек, который читает</b>",
         "Налью утренний кофе? Самое время: читаю 30 минут или хотя бы одна страница.",
-        "●●◐●·●●●◐●●●●○",
-        "12 голосов · серия 12 дней",
+        "<blockquote>●●◐●·●●●◐●●●●○",
+        "12 голосов · серия 12 дней</blockquote>",
     ]
 
 
@@ -47,7 +47,7 @@ def test_marked_full_and_mini():
     lines = texts.marked(habit, stats, "full").split("\n")
     assert lines[1] == "Капля засчитана — полностью."
     assert lines[2].endswith("●●●●●")
-    assert lines[3] == "13 голосов · серия 13 дней"
+    assert lines[3] == "13 голосов · серия 13 дней</blockquote>"
     assert texts.marked(habit, stats, "mini").split("\n")[1] == "Две минуты засчитаны."
 
 
@@ -72,10 +72,18 @@ def test_two_misses_message_and_reversed_buttons(monkeypatch):
     text, keyboard = reminder_message(habit, stats, "morning")
     lines = text.split("\n")
     assert lines[1] == "Два дня без капли — бывает. Голоса никуда не делись: 3. Вернись с малого — просто надень кроссовки."
-    assert lines[2] == "●●●··○"
-    assert lines[3] == "серия начнётся заново"
+    assert lines[2] == "<blockquote>●●●··○"
+    assert lines[3] == "серия начнётся заново</blockquote>"
     assert [[b.text for b in row] for row in keyboard.inline_keyboard] == [["2 минуты", "Сделал"], ["Открыть Каплю"]]
     assert keyboard.inline_keyboard[0][0].callback_data == f"mark:{habit.id}:mini"
+    # Синяя — первая кнопка, здесь это «2 минуты».
+    assert [b.style for b in keyboard.inline_keyboard[0]] == ["primary", None]
+
+
+def test_morning_full_button_is_primary():
+    habit, stats = make("dddd")
+    _, keyboard = reminder_message(habit, stats, "morning")
+    assert [b.style for b in keyboard.inline_keyboard[0]] == ["primary", None]
 
 
 def test_user_text_is_escaped():

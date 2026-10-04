@@ -3,6 +3,7 @@
 import datetime as dt
 import uuid
 
+from aiogram.enums import ButtonStyle
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 from app.core.config import settings
@@ -19,9 +20,13 @@ def _rows(*rows: list[InlineKeyboardButton | None]) -> InlineKeyboardMarkup:
 
 
 def mark_keyboard(habit_id: uuid.UUID, *, two_misses: bool = False, with_open: bool = True) -> InlineKeyboardMarkup:
-    full = InlineKeyboardButton(text="Сделал", callback_data=f"mark:{habit_id}:full")
-    mini = InlineKeyboardButton(text="2 минуты", callback_data=f"mark:{habit_id}:mini")
-    # После двух пропусков «2 минуты» — первой (design/09-bot.md).
+    # Первая кнопка — главная, она синяя. После двух пропусков первой идёт «2 минуты» (design/09-bot.md).
+    full = InlineKeyboardButton(
+        text="Сделал", callback_data=f"mark:{habit_id}:full", style=None if two_misses else ButtonStyle.PRIMARY
+    )
+    mini = InlineKeyboardButton(
+        text="2 минуты", callback_data=f"mark:{habit_id}:mini", style=ButtonStyle.PRIMARY if two_misses else None
+    )
     first_row = [mini, full] if two_misses else [full, mini]
     return _rows(first_row, [open_app_button() if with_open else None])
 
