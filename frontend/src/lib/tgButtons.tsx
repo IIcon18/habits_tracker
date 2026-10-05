@@ -14,6 +14,8 @@ export interface ButtonSpec {
   text: string;
   /** Неактивная кнопка видна, но не нажимается. По умолчанию активна. */
   active?: boolean;
+  /** Идёт сохранение: на кнопке крутится индикатор, нажатия не принимаются. */
+  progress?: boolean;
   onClick: () => void;
 }
 
@@ -98,14 +100,19 @@ function useBottomButton(kind: 'main' | 'secondary', spec: ButtonSpec | null) {
   const latest = useLatest(spec);
   const text = spec?.text;
   const active = spec?.active ?? true;
+  const progress = spec?.progress ?? false;
   const shown = spec !== null;
 
   useEffect(() => {
     if (!shown) return;
-    const click = () => latest.current?.onClick();
+    // Неактивную или занятую кнопку Telegram всё равно может «нажать» (событие уже в пути) — отсекаем здесь.
+    const click = () => {
+      const current = latest.current;
+      if (current && (current.active ?? true) && !current.progress) current.onClick();
+    };
 
     if (!insideTelegram) {
-      const proxy: ButtonSpec = { text: text!, active, onClick: click };
+      const proxy: ButtonSpec = { text: text!, active: active && !progress, onClick: click };
       (kind === 'main' ? dev?.setMain : dev?.setSecondary)?.(proxy);
       return () => (kind === 'main' ? dev?.setMain : dev?.setSecondary)?.(null);
     }
@@ -115,14 +122,16 @@ function useBottomButton(kind: 'main' | 'secondary', spec: ButtonSpec | null) {
     const spec: ButtonSpec = { text: text!, active, onClick: click };
     const apply = () => button.setParams(kind === 'main' ? mainParams(spec) : secondaryParams(spec));
     apply();
+    if (progress) button.showProgress(false);
     button.onClick(click);
     tg!.onEvent('themeChanged', apply);
     return () => {
       button.offClick(click);
       tg!.offEvent('themeChanged', apply);
+      if (progress) button.hideProgress();
       button.hide();
     };
-  }, [kind, shown, text, active, dev, latest]);
+  }, [kind, shown, text, active, progress, dev, latest]);
 }
 
 export const useMainButton = (spec: ButtonSpec | null) => useBottomButton('main', spec);

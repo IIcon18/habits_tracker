@@ -55,8 +55,9 @@ async def tick(bot: FakeBot, now: dt.datetime) -> int:
 async def test_mark_and_undo_from_chat():
     _, habit = await setup()
     async with SessionLocal() as session:
-        text, keyboard = await actions.mark(session, USER_ID, habit.id, "full")
-    assert "Капля засчитана — полностью." in text
+        text, keyboard, toast = await actions.mark(session, USER_ID, habit.id, "full")
+    assert "Сделал полностью — капля засчитана." in text
+    assert toast == "Капля засчитана · +1 голос"
     assert keyboard.inline_keyboard[0][0].text == "Отменить"
 
     async with SessionLocal() as session:
@@ -64,7 +65,7 @@ async def test_mark_and_undo_from_chat():
         today = user_today(user)
         assert (await session.get(Habit, habit.id)) is not None
         text, keyboard = await actions.undo(session, USER_ID, habit.id, today)
-    assert "Самое время" in text
+    assert "самое время" in text
     assert keyboard.inline_keyboard[0][0].text == "Сделал"
 
     async with SessionLocal() as session:
@@ -78,7 +79,7 @@ async def test_morning_once_and_catch_up():
     assert await tick(bot, local(7, 40)) == 0  # ещё рано
     assert await tick(bot, local(7, 50)) == 1  # догоняет в пределах часа
     assert await tick(bot, local(7, 51)) == 0  # второй раз не шлём
-    assert "Самое время" in bot.sent[0][1]
+    assert "самое время" in bot.sent[0][1]
     assert bot.sent[0][0] == USER_ID
 
 
@@ -91,7 +92,7 @@ async def test_evening_only_without_mark():
     _, habit = await setup()
     bot = FakeBot()
     assert await tick(bot, local(21, 5)) == 1
-    assert "Хватит двух минут" in bot.sent[0][1]
+    assert "Хватит и двух минут" in bot.sent[0][1]
 
     # Другой день с отметкой: вечернее не нужно.
     async with SessionLocal() as session:
@@ -117,3 +118,19 @@ async def test_forbidden_marks_user_and_stops_sending():
     # Вечером даже не пытаемся.
     bot = FakeBot()
     assert await tick(bot, local(21, 5)) == 0 and bot.sent == []
+
+
+async def test_bot_button_after_mark_in_app_keeps_mark():
+    """В приложении отметили «2 минуты», потом нажали «Сделал» в старом сообщении бота."""
+    user, habit = await setup()
+    async with SessionLocal() as session:
+        await marks.put_mark(session, user, habit.id, user_today(user), "mini")
+    async with SessionLocal() as session:
+        text, keyboard, toast = await actions.mark(session, USER_ID, habit.id, "full")
+    assert toast == "Сегодня уже отмечено"
+    # Сообщение показывает настоящую отметку, а не нажатую кнопку.
+    assert "Две минуты засчитаны." in text and "1 голос" in text
+    assert keyboard.inline_keyboard[0][0].text == "Отменить"
+    async with SessionLocal() as session:
+        stored = (await habits.get_habit(session, user, habit.id)).marks
+    assert [m.kind for m in stored] == ["mini"]

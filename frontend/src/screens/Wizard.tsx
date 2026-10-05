@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router';
 import { AiSuggestion } from '../components/AiSuggestion';
 import { Chips, Field, PlanPreview, StepProgress } from '../components/Form';
 import { HabitCard } from '../components/HabitCard';
@@ -45,7 +45,6 @@ function stepDone(step: Step, d: Draft): boolean {
 export function Wizard() {
   const params = useParams();
   const step = Number(params.step) as Step;
-  const location = useLocation();
   const navigate = useNavigate();
   const { draft, updateDraft, createFromDraft, resetDraft } = useStore();
   const created = useRef(false);
@@ -64,14 +63,23 @@ export function Wizard() {
   const firstIncomplete = ([1, 2, 3] as Step[]).find((s) => s < step && !stepDone(s, draft));
   const valid = step in STEPS && !firstIncomplete;
 
+  // Двойное нажатие «Дальше» до смены экрана записало бы шаг в историю дважды — и «Назад» пришлось бы жать два раза.
+  const leaving = useRef(false);
+  useEffect(() => {
+    leaving.current = false;
+  }, [step]);
   const goNext = () => {
+    if (leaving.current) return;
+    leaving.current = true;
     haptic.selection();
     navigate(`/new/${step + 1}`);
   };
   const saving = useRef(false);
+  const [creating, setCreating] = useState(false);
   const create = async (withReward: boolean) => {
     if (saving.current) return;
     saving.current = true;
+    setCreating(true);
     try {
       await createFromDraft(withReward);
     } catch {
@@ -79,23 +87,28 @@ export function Wizard() {
       return;
     } finally {
       saving.current = false;
+      setCreating(false);
     }
     created.current = true;
     haptic.success();
     navigate('/today', { replace: true });
   };
 
-  // На первом шаге «Назад» есть, только если пришли с другого экрана (не при первом запуске).
-  const canGoBack = step > 1 || location.key !== 'default';
-  useBackButton(valid && canGoBack ? () => navigate(-1) : null);
+  // «Назад» — только если внутри приложения есть куда вернуться. При первом запуске мастер открывается
+  // через redirect с заменой записи, и location.key уже не 'default', поэтому смотрим на номер записи в истории.
+  const historyIndex = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+  const canGoBack = historyIndex > 0;
+  useBackButton(valid && canGoBack && !creating ? () => navigate(-1) : null);
   useMainButton(
     !valid
       ? null
       : step === 4
-        ? { text: 'Создать', onClick: () => create(true) }
+        ? { text: 'Создать', progress: creating, onClick: () => create(true) }
         : { text: 'Дальше', active: stepDone(step, draft), onClick: () => stepDone(step, draft) && goNext() },
   );
-  useSecondaryButton(valid && step === 4 ? { text: 'Без награды', onClick: () => create(false) } : null);
+  useSecondaryButton(
+    valid && step === 4 ? { text: 'Без награды', active: !creating, onClick: () => create(false) } : null,
+  );
 
   if (!(step in STEPS)) return <Navigate to="/new/1" replace />;
   if (firstIncomplete) return <Navigate to={`/new/${firstIncomplete}`} replace />;

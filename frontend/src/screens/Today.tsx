@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import { DayHeader } from '../components/DayHeader';
 import { HabitCard, PausedCard } from '../components/HabitCard';
-import { dayMonthLabel, todayISO } from '../lib/date';
+import { sinceLabel, todayISO } from '../lib/date';
 import { computeStats } from '../lib/stats';
 import { useStore } from '../lib/store';
 import { haptic } from '../lib/telegram';
@@ -76,7 +76,7 @@ export function Today() {
                 key={h.id}
                 habit={h}
                 votes={stats.get(h.id)!.votes}
-                pausedLabel={dayMonthLabel(h.pauses.find((p) => p.end === null)?.start ?? today)}
+                pausedLabel={sinceLabel(h.pauses.find((p) => p.end === null)?.start ?? today)}
                 onResume={() => resume(h.id)}
               />
             ))}

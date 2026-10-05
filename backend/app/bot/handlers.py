@@ -7,7 +7,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from app.core.database import SessionLocal
-from app.core.exceptions import DomainError
+from app.core.exceptions import DomainError, InvalidInput
 from app.core.security import TelegramUser
 from app.services.users import sync_user
 
@@ -56,12 +56,12 @@ async def on_mark(callback: CallbackQuery) -> None:
         return
     try:
         async with SessionLocal() as session:
-            text, markup = await actions.mark(session, callback.from_user.id, uuid.UUID(habit_id), kind)
+            text, markup, toast = await actions.mark(session, callback.from_user.id, uuid.UUID(habit_id), kind)
     except DomainError as e:
         await callback.answer(e.message)
         return
     await _edit(callback, text, markup)
-    await callback.answer(texts.MARKED_TOAST)
+    await callback.answer(toast)
 
 
 @router.callback_query(F.data.startswith("undo:"))
@@ -74,6 +74,9 @@ async def on_undo(callback: CallbackQuery) -> None:
             )
     except DomainError as e:
         await callback.answer(e.message)
+        # Вчерашнюю отметку отменить уже нельзя — убираем кнопку «Отменить», чтобы не висела.
+        if isinstance(e, InvalidInput) and isinstance(callback.message, Message):
+            await callback.message.edit_reply_markup(reply_markup=keyboards.start_keyboard())
         return
     await _edit(callback, text, markup)
     await callback.answer()

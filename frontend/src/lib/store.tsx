@@ -6,11 +6,11 @@
  * Отметки оптимистичные: карточка обновляется сразу, при ошибке сервера откатывается.
  * TODO: черновик — в Telegram CloudStorage; отметки без сети — в очередь (экран 9.2).
  */
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from './api';
 import { todayISO } from './date';
 import { loadDemo } from './demo';
-import { haptic, insideTelegram } from './telegram';
+import { haptic, insideTelegram, tg } from './telegram';
 import type { Habit, Mark, MarkKind } from './types';
 
 export interface Draft {
@@ -54,16 +54,68 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loadError, setLoadError] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
 
+  /** Отметки и отмены, ещё не подтверждённые сервером, и счётчик всех начатых. */
+  const pending = useRef(0);
+  const started = useRef(0);
+  const loadedOnce = useRef(false);
+  /** Перечитать данные с сервера — после ошибки, чтобы экран совпал с сервером. */
+  const refresh = useRef(() => {});
+  /** Очередь запросов по привычке: «Отметить» и «Отменить» уходят строго по порядку нажатий. */
+  const queues = useRef(new Map<string, Promise<unknown>>());
+
   useEffect(() => {
     if (demoMode) return;
-    api.habits().then(
-      (d) => {
-        setData(d);
-        setLoaded(true);
-      },
-      () => setLoadError(true),
-    );
+    const load = () => {
+      const startedBefore = started.current;
+      api.habits().then(
+        (d) => {
+          // Пока шёл запрос, могла появиться оптимистичная отметка, которой в ответе нет, — тогда ответ пропускаем.
+          if (pending.current === 0 && started.current === startedBefore) setData(d);
+          loadedOnce.current = true;
+          setLoaded(true);
+          setLoadError(false);
+        },
+        () => {
+          // Ошибку показываем, только если данных ещё нет; иначе оставляем то, что на экране.
+          if (!loadedOnce.current) setLoadError(true);
+        },
+      );
+    };
+    refresh.current = load;
+    load();
+    // Mini App не закрывается, пока человек в чате. Возвращаясь, перечитываем: отметки из бота, новый день.
+    const onVisible = () => document.visibilityState === 'visible' && load();
+    document.addEventListener('visibilitychange', onVisible);
+    tg?.onEvent('activated', load);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      tg?.offEvent('activated', load);
+    };
   }, []);
+
+  /**
+   * Запрос, меняющий отметки привычки. Встаёт в очередь за предыдущим запросом по ней же:
+   * иначе быстрые «Отметить» → «Отменить» могли бы дойти до сервера в обратном порядке.
+   * Пока запросы идут, перечитанные данные не применяем.
+   */
+  const track = <T,>(habitId: string, send: () => Promise<T>): Promise<T> => {
+    pending.current += 1;
+    started.current += 1;
+    const prev = queues.current.get(habitId) ?? Promise.resolve();
+    const request = prev.catch(() => {}).then(send);
+    queues.current.set(habitId, request);
+    return request.finally(() => {
+      pending.current -= 1;
+      if (queues.current.get(habitId) === request) queues.current.delete(habitId);
+    });
+  };
+
+  /** Запрос не прошёл: откатываем и сверяемся с сервером. */
+  const failed = (rollback: () => void) => {
+    rollback();
+    haptic.error();
+    refresh.current();
+  };
 
   const store = useMemo<Store>(() => {
     const today = todayISO();
@@ -76,7 +128,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           : [...d.habits, habit],
         marks: [...d.marks.filter((m) => m.habitId !== habit.id), ...marks],
       }));
-    const addMark = (mark: Mark) => setData((d) => ({ ...d, marks: [...d.marks, mark] }));
+    const addMark = (mark: Mark) =>
+      setData((d) => ({
+        ...d,
+        marks: [...d.marks.filter((m) => !(m.habitId === mark.habitId && m.date === mark.date)), mark],
+      }));
     const removeMark = (habitId: string) =>
       setData((d) => ({ ...d, marks: d.marks.filter((m) => !(m.habitId === habitId && m.date === today)) }));
 
@@ -90,21 +146,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const mark: Mark = { habitId, date: today, kind, at: Date.now() };
         addMark(mark);
         if (demoMode) return;
-        api.mark(habitId, today, kind, mark.at).catch(() => {
-          // TODO: тост «Отметка не сохранилась» с «Повторить» (экран 9.3).
-          removeMark(habitId);
-          haptic.error();
-        });
+        // TODO: тост «Отметка не сохранилась» с «Повторить» (экран 9.3).
+        track(habitId, () => api.mark(habitId, today, kind, mark.at)).catch(() => failed(() => removeMark(habitId)));
       },
 
       undo: (habitId) => {
         const prev = data.marks.find((m) => m.habitId === habitId && m.date === today);
         removeMark(habitId);
         if (demoMode || !prev) return;
-        api.unmark(habitId, today).catch(() => {
-          addMark(prev);
-          haptic.error();
-        });
+        track(habitId, () => api.unmark(habitId, today)).catch(() => failed(() => addMark(prev)));
       },
 
       resume: (habitId) => {
@@ -119,7 +169,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }));
           return;
         }
-        api.resume(habitId).then(({ habit, marks }) => replaceHabit(habit, marks), haptic.error);
+        // Второе нажатие, пока первое не дошло, сервер отклонил бы — не отправляем.
+        if (queues.current.has(habitId)) return;
+        track(habitId, () => api.resume(habitId)).then(
+          ({ habit, marks }) => replaceHabit(habit, marks),
+          () => failed(() => {}),
+        );
       },
 
       updateDraft: (patch) => setDraft((d) => ({ ...d, ...patch })),

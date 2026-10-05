@@ -31,6 +31,11 @@ export function dayMonthLabel(s: ISODate): string {
   return fromISODate(s).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 }
 
+/** «Со 2 октября», «С 5 октября»: перед «второго» предлог «со». */
+export function sinceLabel(s: ISODate): string {
+  return `${fromISODate(s).getDate() === 2 ? 'Со' : 'С'} ${dayMonthLabel(s)}`;
+}
+
 /** «7:42» */
 export function timeLabel(at: number): string {
   const d = new Date(at);

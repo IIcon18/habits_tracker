@@ -5,9 +5,9 @@ from html import escape
 from app.models import Habit
 from app.services.stats import DayState, HabitStats
 
-# Ряд дней символами: ● сделал, ◐ две минуты, · пропуск, ○ сегодня не отмечено.
+# Ряд дней символами: ● сделал, ◐ две минуты, ○ пропуск, ◌ сегодня не отмечено.
 # Дни до начала привычки и на паузе в ряд не попадают.
-ROW_SYMBOLS: dict[DayState, str] = {"full": "●", "mini": "◐", "miss": "·", "miss2": "·", "today-empty": "○"}
+ROW_SYMBOLS: dict[DayState, str] = {"full": "●", "mini": "◐", "miss": "○", "miss2": "○", "today-empty": "◌"}
 
 
 def plural(n: int, one: str, few: str, many: str) -> str:
@@ -35,52 +35,60 @@ def stats_line(stats: HabitStats) -> str:
     if stats.votes == 0:
         return "Первый голос — сегодня"
     if stats.miss_state == "two" or stats.streak == 0:
-        return "серия начнётся заново"
+        return f"{votes_word(stats.votes)} · серия начнётся заново"
     return f"{votes_word(stats.votes)} · серия {days_word(stats.streak)}"
 
 
-def _render(habit: Habit, stats: HabitStats, line: str) -> str:
+# Полную версию и версию на две минуты пишут в любой форме: «читаю 30 минут», «одна страница»,
+# «надень кроссовки». Поэтому внутрь фразы их не вставляем, а выводим строкой с подписью, как поля в приложении.
+def _full_line(habit: Habit) -> str:
+    return f"Полная версия: <b>{escape(habit.full)}</b>"
+
+
+def _mini_line(habit: Habit) -> str:
+    return f"На две минуты: <b>{escape(habit.mini)}</b>"
+
+
+def _render(habit: Habit, stats: HabitStats, *lines: str) -> str:
     # Ряд дней и статистика — в цитате: Telegram выделяет её полоской цвета акцента.
+    body = "\n".join(lines)
     return (
-        f"<b>Я человек, который {escape(habit.identity)}</b>\n{line}\n"
+        f"<b>Я человек, который {escape(habit.identity)}</b>\n{body}\n"
         f"<blockquote>{day_row(stats)}\n{stats_line(stats)}</blockquote>"
     )
 
 
-def _cap(s: str) -> str:
-    return s[:1].upper() + s[1:]
-
-
 def morning(habit: Habit, stats: HabitStats) -> str:
-    """Утреннее напоминание: якорь как вопрос-напоминание."""
-    a, f, m = escape(habit.anchor), escape(habit.full), escape(habit.mini)
-    return _render(habit, stats, f"{_cap(a)}? Самое время: {f} или хотя бы {m}.")
+    """Утреннее напоминание. Якорь хранится как продолжение «После того как …»."""
+    anchor = f"После того как {escape(habit.anchor)} — самое время."
+    return _render(habit, stats, anchor, "", _full_line(habit), _mini_line(habit))
 
 
 def evening(habit: Habit, stats: HabitStats) -> str:
     """Вечернее (21:00), если за день нет отметки."""
-    m = escape(habit.mini)
     if stats.miss_state == "one":
-        line = f"Вчера не вышло — это нормально. Сегодня хватит двух минут: {m}."
+        line = "Вчера не вышло — это нормально. Сегодня хватит и двух минут."
     else:
-        line = f"Сегодня ещё без капли. Хватит двух минут: {m}."
-    return _render(habit, stats, line)
+        line = "Сегодня ещё без капли. Хватит и двух минут."
+    return _render(habit, stats, line, "", _mini_line(habit))
 
 
 def two_misses(habit: Habit, stats: HabitStats) -> str:
-    line = (
-        f"Два дня без капли — бывает. Голоса никуда не делись: {stats.votes}. "
-        f"Вернись с малого — просто {escape(habit.mini)}."
-    )
-    return _render(habit, stats, line)
+    if stats.votes:
+        line = "Два дня без капли — так бывает. Голоса никуда не делись, вернись с малого."
+    else:
+        line = "Два дня без капли — так бывает. Начни с самого малого, этого хватит."
+    return _render(habit, stats, line, "", _mini_line(habit))
 
 
 def marked(habit: Habit, stats: HabitStats, kind: str) -> str:
     """Сообщение после нажатия «Сделал» / «2 минуты» (редактируется то же сообщение)."""
-    return _render(habit, stats, "Капля засчитана — полностью." if kind == "full" else "Две минуты засчитаны.")
+    return _render(habit, stats, "Сделал полностью — капля засчитана." if kind == "full" else "Две минуты засчитаны.")
 
 
 MARKED_TOAST = "Капля засчитана · +1 голос"
+# Нажали кнопку в старом сообщении, а сегодня уже отмечено (в приложении или раньше в чате).
+ALREADY_MARKED_TOAST = "Сегодня уже отмечено"
 
 START = (
     "<b>Капля</b>\n"

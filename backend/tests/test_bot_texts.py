@@ -36,8 +36,11 @@ def test_morning():
     lines = texts.morning(habit, stats).split("\n")
     assert lines == [
         "<b>Я человек, который читает</b>",
-        "Налью утренний кофе? Самое время: читаю 30 минут или хотя бы одна страница.",
-        "<blockquote>●●◐●·●●●◐●●●●○",
+        "После того как налью утренний кофе — самое время.",
+        "",
+        "Полная версия: <b>читаю 30 минут</b>",
+        "На две минуты: <b>одна страница</b>",
+        "<blockquote>●●◐●○●●●◐●●●●◌",
         "12 голосов · серия 12 дней</blockquote>",
     ]
 
@@ -45,7 +48,7 @@ def test_morning():
 def test_marked_full_and_mini():
     habit, stats = make("ddmdxdddmdddd", today_kind="full")
     lines = texts.marked(habit, stats, "full").split("\n")
-    assert lines[1] == "Капля засчитана — полностью."
+    assert lines[1] == "Сделал полностью — капля засчитана."
     assert lines[2].endswith("●●●●●")
     assert lines[3] == "13 голосов · серия 13 дней</blockquote>"
     assert texts.marked(habit, stats, "mini").split("\n")[1] == "Две минуты засчитаны."
@@ -54,16 +57,16 @@ def test_marked_full_and_mini():
 def test_evening_after_yesterday_miss():
     habit, stats = make("dddx", mini="надеть кроссовки и выйти за дверь")
     text, keyboard = reminder_message(habit, stats, "evening")
-    assert text.split("\n")[1] == (
-        "Вчера не вышло — это нормально. Сегодня хватит двух минут: надеть кроссовки и выйти за дверь."
-    )
+    lines = text.split("\n")
+    assert lines[1] == "Вчера не вышло — это нормально. Сегодня хватит и двух минут."
+    assert lines[3] == "На две минуты: <b>надеть кроссовки и выйти за дверь</b>"
     # Вечером — только кнопки отметки.
     assert [[b.text for b in row] for row in keyboard.inline_keyboard] == [["Сделал", "2 минуты"]]
 
 
 def test_evening_without_miss():
     habit, stats = make("dddd")
-    assert texts.evening(habit, stats).split("\n")[1] == "Сегодня ещё без капли. Хватит двух минут: одна страница."
+    assert texts.evening(habit, stats).split("\n")[1] == "Сегодня ещё без капли. Хватит и двух минут."
 
 
 def test_two_misses_message_and_reversed_buttons(monkeypatch):
@@ -71,13 +74,25 @@ def test_two_misses_message_and_reversed_buttons(monkeypatch):
     habit, stats = make("dddxx", mini="надень кроссовки")
     text, keyboard = reminder_message(habit, stats, "morning")
     lines = text.split("\n")
-    assert lines[1] == "Два дня без капли — бывает. Голоса никуда не делись: 3. Вернись с малого — просто надень кроссовки."
-    assert lines[2] == "<blockquote>●●●··○"
-    assert lines[3] == "серия начнётся заново</blockquote>"
+    assert lines[1:] == [
+        "Два дня без капли — так бывает. Голоса никуда не делись, вернись с малого.",
+        "",
+        "На две минуты: <b>надень кроссовки</b>",
+        "<blockquote>●●●○○◌",
+        "3 голоса · серия начнётся заново</blockquote>",
+    ]
     assert [[b.text for b in row] for row in keyboard.inline_keyboard] == [["2 минуты", "Сделал"], ["Открыть Каплю"]]
     assert keyboard.inline_keyboard[0][0].callback_data == f"mark:{habit.id}:mini"
     # Синяя — первая кнопка, здесь это «2 минуты».
     assert [b.style for b in keyboard.inline_keyboard[0]] == ["primary", None]
+
+
+def test_two_misses_without_votes():
+    # Голосов ещё нет — не пишем «голоса никуда не делись».
+    habit, stats = make("xx")
+    lines = texts.two_misses(habit, stats).split("\n")
+    assert lines[1] == "Два дня без капли — так бывает. Начни с самого малого, этого хватит."
+    assert lines[-2:] == ["<blockquote>○○◌", "Первый голос — сегодня</blockquote>"]
 
 
 def test_morning_full_button_is_primary():

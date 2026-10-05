@@ -13,6 +13,7 @@ from app.services import habits, marks
 from app.services.stats import habit_stats
 from app.services.users import user_today
 
+from . import texts
 from .messages import marked_message, reminder_message
 
 
@@ -25,12 +26,22 @@ async def _user(session: AsyncSession, user_id: int) -> User:
 
 async def mark(
     session: AsyncSession, user_id: int, habit_id: uuid.UUID, kind: MarkKind
-) -> tuple[str, InlineKeyboardMarkup]:
+) -> tuple[str, InlineKeyboardMarkup, str]:
+    """Возвращает текст, кнопки и всплывающую подсказку.
+
+    Сообщение в чате не знает об отметках из приложения: если сегодня уже отмечено,
+    отметку не трогаем и только показываем, как есть, — иначе «Сделал» молча заменил бы «2 минуты».
+    """
     user = await _user(session, user_id)
     today = user_today(user)
+    habit = await habits.get_habit(session, user, habit_id)
+    existing = next((m for m in habit.marks if m.date == today), None)
+    if existing:
+        stats = habit_stats(habit, today)
+        return (*marked_message(habit, stats, existing.kind, today), texts.ALREADY_MARKED_TOAST)
     await marks.put_mark(session, user, habit_id, today, kind)
     habit = await habits.get_habit(session, user, habit_id)
-    return marked_message(habit, habit_stats(habit, today), kind, today)
+    return (*marked_message(habit, habit_stats(habit, today), kind, today), texts.MARKED_TOAST)
 
 
 async def undo(

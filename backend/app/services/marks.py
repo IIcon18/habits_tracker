@@ -26,7 +26,7 @@ async def put_mark(
     today = user_today(user)
     # Вчера — только для очереди без сети, отправленной уже после полуночи (экран 9.2).
     if day not in (today, today - dt.timedelta(days=1)) or day < habit.created_at:
-        raise InvalidInput("отметить можно только сегодня")
+        raise InvalidInput("отметить можно только сегодня или вчера")
     if habit.status == "paused":
         raise Conflict("привычка на паузе")
 

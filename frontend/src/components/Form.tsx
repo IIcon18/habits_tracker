@@ -92,11 +92,14 @@ export function StepProgress({ step, total }: { step: number; total: number }) {
   );
 }
 
-/** «После того как налью утренний кофе, я читаю 30 минут. Или хотя бы прочитать одну страницу.» */
+/**
+ * «После того как налью утренний кофе — читаю 30 минут. Или хотя бы одна страница.»
+ * Версии пишут в любой форме («читаю», «читать», «одна страница»), поэтому без «я» перед ними.
+ */
 export function PlanPreview({ anchor, full, mini }: { anchor: string; full: string; mini: string }) {
   return (
     <p className="plan-preview">
-      <b>После того как {anchor.trim()}</b>, я {full.trim()}. Или хотя бы {mini.trim()}.
+      <b>После того как {anchor.trim()}</b> — {full.trim()}. Или хотя бы {mini.trim()}.
     </p>
   );
 }

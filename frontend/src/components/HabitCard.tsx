@@ -49,7 +49,7 @@ export function HabitCard({ habit, stats, justMarked, onMark, onUndo, preview }:
         <div className="habit-card__warn" role="note">
           Два дня без капли
           <span>
-            Голоса никуда не делись — их {votes}. Вернись с двух минут: {habit.mini}.
+            {votes > 0 ? `Голоса никуда не делись — их ${votes}. ` : ''}Вернись с двух минут: {habit.mini}.
           </span>
         </div>
       )}
@@ -92,6 +92,7 @@ export function HabitCard({ habit, stats, justMarked, onMark, onUndo, preview }:
 interface PausedCardProps {
   habit: Habit;
   votes: number;
+  /** «Со 2 октября» — начало паузы, вместе с предлогом. */
   pausedLabel: string;
   onResume: () => void;
 }
@@ -102,7 +103,7 @@ export function PausedCard({ habit, votes, pausedLabel, onResume }: PausedCardPr
       <div className="paused-card__text">
         <h3 className="t-identity">Я человек, который {habit.identity}</h3>
         <p className="paused-card__meta">
-          С {pausedLabel}. {votesWord(votes)} и серия сохранены
+          {pausedLabel}. {votesWord(votes)} и серия сохранены
         </p>
       </div>
       <button type="button" className="paused-card__btn t-button" onClick={onResume}>
