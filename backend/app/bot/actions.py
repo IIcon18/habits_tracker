@@ -14,7 +14,7 @@ from app.services.stats import habit_stats
 from app.services.users import user_today
 
 from . import texts
-from .messages import marked_message, reminder_message
+from .messages import marked_message, message_slot, reminder_message
 
 
 async def _user(session: AsyncSession, user_id: int) -> User:
@@ -51,4 +51,5 @@ async def undo(
     user = await _user(session, user_id)
     await marks.delete_mark(session, user, habit_id, day)
     habit = await habits.get_habit(session, user, habit_id)
-    return reminder_message(habit, habit_stats(habit, user_today(user)), "morning")
+    today = user_today(user)
+    return reminder_message(habit, habit_stats(habit, today), message_slot(habit, today))

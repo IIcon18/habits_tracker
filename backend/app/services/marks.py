@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import Conflict, InvalidInput
+from app.core.notify import notify_changed
 from app.models import Mark, User
 from app.schemas import MarkKind
 
@@ -39,6 +40,7 @@ async def put_mark(
         .execution_options(populate_existing=True)
     )
     mark = await session.scalar(stmt)
+    await notify_changed(session, user.id)
     await session.commit()
     return mark
 
@@ -49,4 +51,5 @@ async def delete_mark(session: AsyncSession, user: User, habit_id: uuid.UUID, da
     if day != user_today(user):
         raise InvalidInput("отменить можно только сегодняшнюю отметку")
     await session.execute(delete(Mark).where(Mark.habit_id == habit.id, Mark.date == day))
+    await notify_changed(session, user.id)
     await session.commit()

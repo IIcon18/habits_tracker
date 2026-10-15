@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.notify import notify_changed
 from app.models import Reminder, User
 from app.schemas import ReminderIn
 
@@ -22,5 +23,6 @@ async def set_reminder(session: AsyncSession, user: User, habit_id: uuid.UUID, d
         habit.reminder.time = data.time
         habit.reminder.days = days
         habit.reminder.evening = data.evening
+    await notify_changed(session, user.id)
     await session.commit()
     return habit.reminder

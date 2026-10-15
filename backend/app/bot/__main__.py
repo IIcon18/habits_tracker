@@ -8,9 +8,11 @@ from aiogram.types import MenuButtonWebApp, WebAppInfo
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.notify import asyncpg_dsn, listen
 
 from .handlers import router
 from .scheduler import run_scheduler
+from .sync import MessageSync
 
 log = logging.getLogger("app.bot")
 
@@ -36,11 +38,14 @@ async def main() -> None:
         log.warning("WEBAPP_URL не задан: нет кнопки меню и «Открыть Каплю»")
 
     scheduler = asyncio.create_task(run_scheduler(bot, SessionLocal))
+    # Отметки из приложения → сегодняшнее напоминание в чате перерисовывается.
+    listener = asyncio.create_task(listen(asyncpg_dsn(settings.database_url), MessageSync(bot, SessionLocal).changed))
     try:
         # Polling: бот сам забирает обновления, входящий адрес не нужен.
         await dp.start_polling(bot)
     finally:
         scheduler.cancel()
+        listener.cancel()
         await bot.session.close()
 
 

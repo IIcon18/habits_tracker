@@ -1,12 +1,19 @@
 # DOMAIN — из .env (см. docker-compose.prod.yml). Сертификат Let's Encrypt Caddy выпускает сам.
 {$DOMAIN} {
-	encode zstd gzip
+	# Поток событий для Mini App (SSE): без сжатия и буфера, иначе события застревают в прокси.
+	handle /api/events {
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
 
 	handle /api/* {
+		encode zstd gzip
 		reverse_proxy api:8000
 	}
 
 	handle {
+		encode zstd gzip
 		root * /srv
 		# У файлов из assets/ хеш в имени — можно кешировать навсегда.
 		@assets path /assets/*

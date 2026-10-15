@@ -2,7 +2,7 @@ import datetime as dt
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, ForeignKey, Integer, Time
+from sqlalchemy import BigInteger, Date, ForeignKey, Integer, String, Time
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,5 +24,9 @@ class Reminder(Base):
     # Даты (в поясе пользователя), когда бот уже отправил напоминание, — чтобы не слать дважды.
     last_morning_on: Mapped[dt.date | None] = mapped_column(Date)
     last_evening_on: Mapped[dt.date | None] = mapped_column(Date)
+    # Последнее напоминание в чате: его бот перерисовывает, когда отметку ставят или отменяют в приложении.
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    message_on: Mapped[dt.date | None] = mapped_column(Date)
+    message_slot: Mapped[str | None] = mapped_column(String(8))
 
     habit: Mapped["Habit"] = relationship(back_populates="reminder")

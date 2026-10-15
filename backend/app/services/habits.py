@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import InvalidInput, NotFound
+from app.core.notify import notify_changed
 from app.models import Habit, HabitPause, User
 from app.schemas import HabitIn, HabitPatch
 
@@ -43,6 +44,7 @@ async def get_habit(session: AsyncSession, user: User, habit_id: uuid.UUID) -> H
 async def create_habit(session: AsyncSession, user: User, data: HabitIn) -> Habit:
     habit = Habit(user_id=user.id, status="active", created_at=user_today(user), **data.model_dump())
     session.add(habit)
+    await notify_changed(session, user.id)
     await session.commit()
     return await get_habit(session, user, habit.id)
 
@@ -53,6 +55,7 @@ async def update_habit(session: AsyncSession, user: User, habit_id: uuid.UUID, d
         if value is None and field != "reward":
             raise InvalidInput(f"{field} не может быть пустым")
         setattr(habit, field, value)
+    await notify_changed(session, user.id)
     await session.commit()
     return await get_habit(session, user, habit_id)
 
@@ -60,6 +63,7 @@ async def update_habit(session: AsyncSession, user: User, habit_id: uuid.UUID, d
 async def delete_habit(session: AsyncSession, user: User, habit_id: uuid.UUID) -> None:
     habit = await get_habit(session, user, habit_id)
     habit.deleted_at = dt.datetime.now(dt.UTC)
+    await notify_changed(session, user.id)
     await session.commit()
 
 
@@ -68,6 +72,7 @@ async def pause_habit(session: AsyncSession, user: User, habit_id: uuid.UUID) ->
     if habit.status != "paused":
         habit.status = "paused"
         habit.pauses.append(HabitPause(start=user_today(user)))
+        await notify_changed(session, user.id)
         await session.commit()
     return await get_habit(session, user, habit_id)
 
@@ -80,5 +85,6 @@ async def resume_habit(session: AsyncSession, user: User, habit_id: uuid.UUID) -
         for pause in habit.pauses:
             if pause.end is None:
                 pause.end = today
+        await notify_changed(session, user.id)
         await session.commit()
     return await get_habit(session, user, habit_id)

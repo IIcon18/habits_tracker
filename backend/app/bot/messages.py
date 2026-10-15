@@ -24,3 +24,19 @@ def reminder_message(habit: Habit, stats: HabitStats, slot: Slot) -> tuple[str, 
 
 def marked_message(habit: Habit, stats: HabitStats, kind: str, day: dt.date) -> tuple[str, InlineKeyboardMarkup]:
     return texts.marked(habit, stats, kind), keyboards.undo_keyboard(habit.id, day)
+
+
+def current_message(habit: Habit, stats: HabitStats, today: dt.date, slot: Slot) -> tuple[str, InlineKeyboardMarkup]:
+    """Сообщение по сегодняшнему состоянию: «засчитано», если отметка есть, иначе напоминание."""
+    mark = next((m for m in habit.marks if m.date == today), None)
+    if mark:
+        return marked_message(habit, stats, mark.kind, today)
+    return reminder_message(habit, stats, slot)
+
+
+def message_slot(habit: Habit, today: dt.date) -> Slot:
+    """Каким было сегодняшнее напоминание; если бот сегодня не писал — утреннее."""
+    reminder = habit.reminder
+    if reminder and reminder.message_on == today and reminder.message_slot == "evening":
+        return "evening"
+    return "morning"

@@ -68,6 +68,8 @@ Mini App работает только по HTTPS:
   «Два дня без капли» с кнопками в обратном порядке. Дата отправки хранится в `reminders.last_*_on`:
   дважды не придёт, а если бот был выключен, догонит в течение часа.
 - Кнопки «Сделал» / «2 минуты» / «Отменить» вызывают те же сервисы, что и API.
+- Сообщение с напоминанием следует за приложением: отметили или отменили в Mini App — бот сразу
+  перерисовывает сегодняшнее напоминание (`app/bot/sync.py`, id сообщения — в `reminders.message_*`).
 - Если Telegram отвечает 403 (человек не нажимал /start или заблокировал бота) — `users.allows_write = false`,
   напоминания ему не шлются до следующего /start.
 - Логи: `docker compose logs -f bot`.
@@ -94,6 +96,14 @@ curl -X PUT localhost:8001/api/habits/<id>/reminder -H 'Content-Type: applicatio
 | PUT | `/habits/{id}/marks/{date}` | отметка `{kind: full\|mini, at?}`, идемпотентно; сегодня или вчера |
 | DELETE | `/habits/{id}/marks/{date}` | отменить, только сегодня |
 | GET / PUT | `/habits/{id}/reminder` | напоминание `{time, days[1..7], evening}` |
+| GET | `/events` | поток SSE: `event: changed` — данные пользователя изменились, перечитай `/habits` |
 
 Заголовки: `Authorization: tma <initData>`, `X-Timezone: <IANA>`.
+## Синхронизация приложения и бота
+
+Сервис, меняющий привычки или отметки, в той же транзакции вызывает `notify_changed` (`app/core/notify.py`):
+Postgres `NOTIFY` уходит после коммита. Его слушают оба процесса: API пересылает событие в открытые потоки
+`/api/events` (Mini App сразу перечитывает данные), бот перерисовывает своё сообщение в чате.
+Новый сервис, который что-то меняет, — не забудь `notify_changed` перед `commit`.
+
 Логика серии — `app/services/stats.py`, зеркало `frontend/src/lib/stats.ts`: меняешь одно — меняй и другое.

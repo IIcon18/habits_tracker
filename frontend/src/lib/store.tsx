@@ -4,10 +4,11 @@
  * Источник данных — API бэкенда (внутри Telegram или при VITE_USE_API=1),
  * иначе демо-данные из demo.ts (для вёрстки в браузере; ?demo=… тоже включает демо).
  * Отметки оптимистичные: карточка обновляется сразу, при ошибке сервера откатывается.
+ * Изменения из бота и других окон приходят потоком событий сервера — данные перечитываются сразу.
  * TODO: черновик — в Telegram CloudStorage; отметки без сети — в очередь (экран 9.2).
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api } from './api';
+import { api, watchChanges } from './api';
 import { todayISO } from './date';
 import { loadDemo } from './demo';
 import { haptic, insideTelegram, tg } from './telegram';
@@ -58,6 +59,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const pending = useRef(0);
   const started = useRef(0);
   const loadedOnce = useRef(false);
+  /** Номер последнего запроса привычек: ответ на более ранний, пришедший позже, не применяем. */
+  const loadSeq = useRef(0);
   /** Перечитать данные с сервера — после ошибки, чтобы экран совпал с сервером. */
   const refresh = useRef(() => {});
   /** Очередь запросов по привычке: «Отметить» и «Отменить» уходят строго по порядку нажатий. */
@@ -67,8 +70,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (demoMode) return;
     const load = () => {
       const startedBefore = started.current;
+      const seq = ++loadSeq.current;
       api.habits().then(
         (d) => {
+          if (seq !== loadSeq.current) return;
           // Пока шёл запрос, могла появиться оптимистичная отметка, которой в ответе нет, — тогда ответ пропускаем.
           if (pending.current === 0 && started.current === startedBefore) setData(d);
           loadedOnce.current = true;
@@ -77,19 +82,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         },
         () => {
           // Ошибку показываем, только если данных ещё нет; иначе оставляем то, что на экране.
-          if (!loadedOnce.current) setLoadError(true);
+          if (seq === loadSeq.current && !loadedOnce.current) setLoadError(true);
         },
       );
     };
     refresh.current = load;
     load();
-    // Mini App не закрывается, пока человек в чате. Возвращаясь, перечитываем: отметки из бота, новый день.
-    const onVisible = () => document.visibilityState === 'visible' && load();
+    // Несколько событий подряд (своя отметка, кнопка в чате) — одно перечитывание.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const soon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(load, 150);
+    };
+    // Отметка в чате с ботом или в другом окне — сервер сообщает сразу, пока приложение открыто.
+    const stopWatching = watchChanges(soon);
+    // Возвращаясь в приложение, тоже перечитываем: поток мог оборваться, пока оно было свёрнуто, или наступил новый день.
+    const onVisible = () => document.visibilityState === 'visible' && soon();
     document.addEventListener('visibilitychange', onVisible);
-    tg?.onEvent('activated', load);
+    window.addEventListener('focus', soon);
+    tg?.onEvent('activated', soon);
     return () => {
+      clearTimeout(timer);
+      stopWatching();
       document.removeEventListener('visibilitychange', onVisible);
-      tg?.offEvent('activated', load);
+      window.removeEventListener('focus', soon);
+      tg?.offEvent('activated', soon);
     };
   }, []);
 

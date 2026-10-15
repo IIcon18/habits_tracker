@@ -78,7 +78,7 @@ async def send_due_reminders(session: AsyncSession, bot: Bot, now: dt.datetime |
             continue
         text, keyboard = reminder_message(habit, stats, slot)
         try:
-            await bot.send_message(user.id, text, reply_markup=keyboard)
+            message = await bot.send_message(user.id, text, reply_markup=keyboard)
         except TelegramForbiddenError:
             # Пользователь не запускал бота или заблокировал его — экран 8.4 в приложении.
             user.allows_write = False
@@ -86,6 +86,10 @@ async def send_due_reminders(session: AsyncSession, bot: Bot, now: dt.datetime |
             log.exception("не удалось отправить напоминание пользователю %s", user.id)
         else:
             user.allows_write = True
+            # Это сообщение бот перерисует, если отметку поставят или отменят в приложении (sync.py).
+            reminder.message_id = message.message_id
+            reminder.message_on = today
+            reminder.message_slot = slot
             sent += 1
     await session.commit()
     return sent

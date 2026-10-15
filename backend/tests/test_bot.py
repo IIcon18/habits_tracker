@@ -1,11 +1,13 @@
 """Бот на тестовой базе: отметка из чата и планировщик напоминаний."""
 
 import datetime as dt
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.methods import SendMessage
+from aiogram.types import InlineKeyboardMarkup
 
 from app.bot import actions
 from app.bot.scheduler import send_due_reminders
@@ -24,12 +26,17 @@ USER_ID = 3003
 class FakeBot:
     def __init__(self, fail: Exception | None = None):
         self.sent: list[tuple[int, str]] = []
+        self.edited: list[tuple[int, str, InlineKeyboardMarkup]] = []
         self.fail = fail
 
     async def send_message(self, chat_id: int, text: str, reply_markup=None):
         if self.fail:
             raise self.fail
         self.sent.append((chat_id, text))
+        return SimpleNamespace(message_id=100 + len(self.sent))
+
+    async def edit_message_text(self, text: str, chat_id: int, message_id: int, reply_markup=None):
+        self.edited.append((message_id, text, reply_markup))
 
 
 async def setup(evening: bool = True, at: dt.time = dt.time(7, 45)) -> tuple[User, Habit]:
