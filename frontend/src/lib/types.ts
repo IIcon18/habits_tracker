@@ -23,12 +23,18 @@ export interface Pause {
   end: ISODate | null;
 }
 
+/** Оба напоминания приходят, только если сегодня ещё не отмечено. */
 export interface Reminder {
-  /** «07:45» */
+  /** Основное, «07:45». */
   time: string;
-  /** 1 (пн) … 7 (вс) */
+  /** 1 (пн) … 7 (вс), для обоих напоминаний. */
   days: number[];
+  /** Основное включено. */
+  morning: boolean;
+  /** «Если не отмечено» — ещё раз, мягко про две минуты. */
   evening: boolean;
+  /** «21:00», позже основного. */
+  eveningTime: string;
 }
 
 export interface Mark {

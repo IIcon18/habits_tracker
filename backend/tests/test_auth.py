@@ -1,9 +1,11 @@
+import asyncio
 import time
 
 import pytest
 
 from app.core.security import InvalidInitData, validate_init_data
 
+from .conftest import client_for
 from .initdata import BOT_TOKEN, make_init_data
 
 DAY = 24 * 60 * 60
@@ -36,3 +38,10 @@ def test_expired():
 def test_missing_hash():
     with pytest.raises(InvalidInitData, match="hash"):
         validate_init_data("auth_date=1&user=%7B%7D", BOT_TOKEN, DAY)
+
+
+async def test_first_visit_with_parallel_requests():
+    """Первый запуск: приложение одновременно грузит привычки и открывает поток событий."""
+    async with client_for(9009) as a, client_for(9009) as b:
+        r1, r2 = await asyncio.gather(a.get("/api/habits"), b.get("/api/me"))
+    assert (r1.status_code, r2.status_code) == (200, 200)

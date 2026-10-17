@@ -9,4 +9,10 @@ router = APIRouter(tags=["me"])
 
 @router.get("/me", response_model=MeOut)
 async def me(user: CurrentUser) -> MeOut:
-    return MeOut(id=user.id, first_name=user.first_name, timezone=user.timezone, today=user_today(user))
+    return MeOut(
+        id=user.id,
+        first_name=user.first_name,
+        timezone=user.timezone,
+        today=user_today(user),
+        allows_write=user.allows_write,
+    )

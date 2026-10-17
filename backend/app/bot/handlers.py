@@ -16,8 +16,8 @@ from . import actions, keyboards, texts
 router = Router()
 
 
-@router.message(CommandStart())
-async def start(message: Message) -> None:
+async def allow_writes(message: Message) -> None:
+    """Человек написал боту или разрешил сообщения — теперь бот может ему писать."""
     if message.from_user is None:
         return
     async with SessionLocal() as session:
@@ -31,10 +31,21 @@ async def start(message: Message) -> None:
             ),
             timezone=None,
         )
-        # Человек сам написал боту — теперь бот может ему писать.
         user.allows_write = True
         await session.commit()
+
+
+@router.message(CommandStart())
+async def start(message: Message) -> None:
+    await allow_writes(message)
     await message.answer(texts.START, reply_markup=keyboards.start_keyboard())
+
+
+@router.message(F.write_access_allowed)
+async def write_access_allowed(message: Message) -> None:
+    """Разрешил сообщения в приложении (requestWriteAccess, экран 8.4). Telegram сообщает об этом служебным
+    сообщением; отвечать на него не нужно — первое напоминание придёт в своё время."""
+    await allow_writes(message)
 
 
 async def _edit(callback: CallbackQuery, text: str, markup: InlineKeyboardMarkup) -> None:

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router';
 import { DayHeader } from '../components/DayHeader';
 import { HabitCard, PausedCard } from '../components/HabitCard';
-import { sinceLabel, todayISO } from '../lib/date';
+import { sinceLabel } from '../lib/date';
 import { computeStats } from '../lib/stats';
 import { useStore } from '../lib/store';
 import { haptic } from '../lib/telegram';
@@ -10,8 +10,7 @@ import type { MarkKind } from '../lib/types';
 import './Today.css';
 
 export function Today() {
-  const today = todayISO();
-  const { habits, marks, loaded, loadError, mark, undo, resume } = useStore();
+  const { today, habits, marks, loaded, loadError, mark, undo, resume } = useStore();
   /** Привычка, отмеченная только что, — для анимации капли. */
   const [justMarked, setJustMarked] = useState<string | null>(null);
 

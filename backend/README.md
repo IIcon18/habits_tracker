@@ -63,22 +63,24 @@ Mini App работает только по HTTPS:
 ## Бот
 
 - Работает через polling: сам забирает обновления у Telegram, входящий адрес не нужен.
-- Раз в минуту проверяет напоминания по часовому поясу каждого пользователя: утреннее — во время
-  из настроек, вечернее — в 21:00, если за день нет отметки; после двух пропусков — сообщение
+- Раз в минуту проверяет напоминания по часовому поясу каждого пользователя. Оба — только если сегодня
+  ещё нет отметки: основное — в `time`, «если не отмечено» — в `eveningTime` (по умолчанию 21:00),
+  любое можно выключить (`morning` / `evening`); после двух пропусков — сообщение
   «Два дня без капли» с кнопками в обратном порядке. Дата отправки хранится в `reminders.last_*_on`:
   дважды не придёт, а если бот был выключен, догонит в течение часа.
 - Кнопки «Сделал» / «2 минуты» / «Отменить» вызывают те же сервисы, что и API.
 - Сообщение с напоминанием следует за приложением: отметили или отменили в Mini App — бот сразу
   перерисовывает сегодняшнее напоминание (`app/bot/sync.py`, id сообщения — в `reminders.message_*`).
 - Если Telegram отвечает 403 (человек не нажимал /start или заблокировал бота) — `users.allows_write = false`,
-  напоминания ему не шлются до следующего /start.
+  напоминания ему не шлются до следующего /start или до «Разрешить сообщения» в приложении
+  (`requestWriteAccess`: Telegram присылает боту служебное `write_access_allowed`). Значение отдаёт `GET /me`.
 - Логи: `docker compose logs -f bot`.
 
-Пока в приложении нет экрана напоминания (6.1), напоминание можно включить запросом:
+Напоминание настраивается в приложении: экран открывается сразу после создания привычки. Без приложения — запросом:
 
 ```bash
 curl -X PUT localhost:8001/api/habits/<id>/reminder -H 'Content-Type: application/json' \
-  -d '{"time": "07:45", "days": [1,2,3,4,5,6,7], "evening": true}'
+  -d '{"time": "07:45", "days": [1,2,3,4,5,6,7], "morning": true, "evening": true, "eveningTime": "21:00"}'
 ```
 
 (с `DEBUG=1` и `DEV_USER_ID` = твоему Telegram id; id привычки — из `curl localhost:8001/api/habits`).
@@ -87,7 +89,7 @@ curl -X PUT localhost:8001/api/habits/<id>/reminder -H 'Content-Type: applicatio
 
 | Метод | Путь | Что делает |
 | --- | --- | --- |
-| GET | `/me` | пользователь, его часовой пояс и «сегодня» |
+| GET | `/me` | пользователь, его часовой пояс, «сегодня» и `allowsWrite` (может ли бот писать) |
 | GET | `/habits` | привычки с отметками, паузами и напоминанием |
 | POST | `/habits` | создать (`identity`, `full`, `mini`, `anchor`, `reward?`) |
 | PATCH | `/habits/{id}` | изменить поля |
@@ -95,7 +97,7 @@ curl -X PUT localhost:8001/api/habits/<id>/reminder -H 'Content-Type: applicatio
 | POST | `/habits/{id}/pause`, `/resume` | пауза / вернуть |
 | PUT | `/habits/{id}/marks/{date}` | отметка `{kind: full\|mini, at?}`, идемпотентно; сегодня или вчера |
 | DELETE | `/habits/{id}/marks/{date}` | отменить, только сегодня |
-| GET / PUT | `/habits/{id}/reminder` | напоминание `{time, days[1..7], evening}` |
+| GET / PUT | `/habits/{id}/reminder` | напоминание `{time, days[1..7], morning, evening, eveningTime}`: хотя бы одно включено, `eveningTime` позже `time` |
 | GET | `/events` | поток SSE: `event: changed` — данные пользователя изменились, перечитай `/habits` |
 
 Заголовки: `Authorization: tma <initData>`, `X-Timezone: <IANA>`.

@@ -1,6 +1,7 @@
 """Напоминания: раз в минуту смотрим, у кого по его часовому поясу подошло время.
 
-Утреннее — во время из настроек, вечернее — в 21:00, если за день нет отметки.
+Оба напоминания — только если сегодня ещё нет отметки: основное («morning») — в reminder.time,
+«если не отмечено» («evening») — в reminder.evening_time, мягко про две минуты. Любое можно выключить.
 Дата отправки запоминается в reminders.last_*_on, поэтому сообщение не уйдёт дважды,
 а если бот лежал в нужную минуту, оно догонит в течение часа.
 """
@@ -23,7 +24,6 @@ from .messages import Slot, reminder_message
 
 log = logging.getLogger(__name__)
 
-EVENING_AT = dt.time(21, 0)
 CATCH_UP = dt.timedelta(hours=1)
 
 
@@ -37,9 +37,9 @@ def due_slot(reminder: Reminder, local_now: dt.datetime) -> Slot | None:
     today = local_now.date()
     if local_now.isoweekday() not in reminder.days:
         return None
-    if reminder.last_morning_on != today and _in_window(local_now, reminder.time):
+    if reminder.morning and reminder.last_morning_on != today and _in_window(local_now, reminder.time):
         return "morning"
-    if reminder.evening and reminder.last_evening_on != today and _in_window(local_now, EVENING_AT):
+    if reminder.evening and reminder.last_evening_on != today and _in_window(local_now, reminder.evening_time):
         return "evening"
     return None
 
@@ -69,8 +69,8 @@ async def send_due_reminders(session: AsyncSession, bot: Bot, now: dt.datetime |
         today = local_now.date()
         reminder.last_morning_on = today if slot == "morning" else reminder.last_morning_on
         reminder.last_evening_on = today if slot == "evening" else reminder.last_evening_on
-        # Утреннее в 21:00 заменяет вечернее — два сообщения подряд не шлём.
-        if slot == "morning" and _in_window(local_now, EVENING_AT):
+        # Основное ушло, когда уже пора и второму (бот догонял после простоя), — два сообщения подряд не шлём.
+        if slot == "morning" and _in_window(local_now, reminder.evening_time):
             reminder.last_evening_on = today
 
         stats = habit_stats(habit, today)

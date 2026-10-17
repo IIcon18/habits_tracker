@@ -111,7 +111,7 @@ async def test_reminder(client: AsyncClient):
     assert (await client.get(url)).json() is None
 
     r = await client.put(url, json={"time": "07:45", "days": [5, 1, 2, 2], "evening": True})
-    assert r.json() == {"time": "07:45:00", "days": [1, 2, 5], "evening": True}
+    assert r.json() == {"time": "07:45:00", "days": [1, 2, 5], "morning": True, "evening": True, "eveningTime": "21:00:00"}
 
     habits = (await client.get("/api/habits")).json()
     assert habits[0]["reminder"]["days"] == [1, 2, 5]

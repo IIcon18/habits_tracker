@@ -39,13 +39,15 @@ class FakeBot:
         self.edited.append((message_id, text, reply_markup))
 
 
-async def setup(evening: bool = True, at: dt.time = dt.time(7, 45)) -> tuple[User, Habit]:
+async def setup(evening: bool = True, at: dt.time = dt.time(7, 45), **reminder) -> tuple[User, Habit]:
     async with SessionLocal() as session:
         user = await sync_user(session, TelegramUser(id=USER_ID, first_name="Илья"), TZ)
         habit = await habits.create_habit(
             session, user, HabitIn(identity="читает", full="читаю 30 минут", mini="одна страница", anchor="налью кофе")
         )
-        await reminders.set_reminder(session, user, habit.id, ReminderIn(time=at, days=[1, 2, 3, 4, 5, 6, 7], evening=evening))
+        await reminders.set_reminder(
+            session, user, habit.id, ReminderIn(time=at, days=[1, 2, 3, 4, 5, 6, 7], evening=evening, **reminder)
+        )
         return user, habit
 
 

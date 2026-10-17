@@ -80,8 +80,9 @@ export function Wizard() {
     if (saving.current) return;
     saving.current = true;
     setCreating(true);
+    let habit: Habit;
     try {
-      await createFromDraft(withReward);
+      habit = await createFromDraft(withReward);
     } catch {
       haptic.error();
       return;
@@ -91,7 +92,8 @@ export function Wizard() {
     }
     created.current = true;
     haptic.success();
-    navigate('/today', { replace: true });
+    // Сразу предлагаем напоминание (6.1): без него большинство его так и не включит. «Назад» там ведёт на «Сегодня».
+    navigate(`/habit/${habit.id}/reminder`, { replace: true, state: { afterCreate: true } });
   };
 
   // «Назад» — только если внутри приложения есть куда вернуться. При первом запуске мастер открывается

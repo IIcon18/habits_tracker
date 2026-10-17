@@ -9,10 +9,10 @@
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, watchChanges } from './api';
-import { todayISO } from './date';
+import { todayISO, type ISODate } from './date';
 import { loadDemo } from './demo';
 import { haptic, insideTelegram, tg } from './telegram';
-import type { Habit, Mark, MarkKind } from './types';
+import type { Habit, Mark, MarkKind, Reminder } from './types';
 
 export interface Draft {
   identity: string;
@@ -33,6 +33,8 @@ interface Data {
 }
 
 interface Store extends Data {
+  /** «Сегодня» на устройстве; меняется в полночь, даже если приложение просто открыто. */
+  today: ISODate;
   /** false, пока привычки грузятся с сервера. */
   loaded: boolean;
   /** Не удалось загрузить привычки. */
@@ -40,6 +42,11 @@ interface Store extends Data {
   mark: (habitId: string, kind: MarkKind) => void;
   undo: (habitId: string) => void;
   resume: (habitId: string) => void;
+  /** Сохраняет напоминание привычки (экран 6.1). */
+  saveReminder: (habitId: string, reminder: Reminder) => Promise<void>;
+  /** Может ли бот писать: null — неизвестно (или вне Telegram), false — отказ (экран 8.4). */
+  allowsWrite: boolean | null;
+  setAllowsWrite: (allowed: boolean) => void;
   draft: Draft;
   updateDraft: (patch: Partial<Draft>) => void;
   /** Создаёт привычку из черновика. Черновик не трогает — его очищает resetDraft. */
@@ -54,6 +61,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState(demoMode);
   const [loadError, setLoadError] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [today, setToday] = useState<ISODate>(todayISO);
+  const [allowsWrite, setAllowsWrite] = useState<boolean | null>(null);
 
   /** Отметки и отмены, ещё не подтверждённые сервером, и счётчик всех начатых. */
   const pending = useRef(0);
@@ -65,6 +74,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const refresh = useRef(() => {});
   /** Очередь запросов по привычке: «Отметить» и «Отменить» уходят строго по порядку нажатий. */
   const queues = useRef(new Map<string, Promise<unknown>>());
+
+  // Без этого после полуночи открытое приложение показывало бы вчерашний день и отправляло отметку вчерашним числом.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const sync = () => {
+      setToday(todayISO());
+      clearTimeout(timer);
+      const midnight = new Date();
+      midnight.setHours(24, 0, 1, 0);
+      timer = setTimeout(sync, midnight.getTime() - Date.now());
+    };
+    sync();
+    // Таймеры в свёрнутом приложении могут опаздывать — сверяемся, когда оно снова на экране.
+    const onVisible = () => document.visibilityState === 'visible' && sync();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', sync);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (demoMode) return;
@@ -88,6 +119,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
     refresh.current = load;
     load();
+    api.me().then(
+      (me) => setAllowsWrite(me.allowsWrite),
+      () => {},
+    );
     // Несколько событий подряд (своя отметка, кнопка в чате) — одно перечитывание.
     let timer: ReturnType<typeof setTimeout> | undefined;
     const soon = () => {
@@ -135,8 +170,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const store = useMemo<Store>(() => {
-    const today = todayISO();
-
     /** Заменить привычку и её отметки ответом сервера. */
     const replaceHabit = (habit: Habit, marks: Mark[]) =>
       setData((d) => ({
@@ -155,6 +188,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     return {
       ...data,
+      today,
       loaded,
       loadError,
       draft,
@@ -194,6 +228,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         );
       },
 
+      saveReminder: async (habitId, reminder) => {
+        const saved = demoMode ? reminder : await api.setReminder(habitId, reminder);
+        setData((d) => ({ ...d, habits: d.habits.map((h) => (h.id === habitId ? { ...h, reminder: saved } : h)) }));
+      },
+
+      allowsWrite,
+      setAllowsWrite,
+
       updateDraft: (patch) => setDraft((d) => ({ ...d, ...patch })),
 
       createFromDraft: async (withReward) => {
@@ -222,7 +264,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       resetDraft: () => setDraft(emptyDraft),
     };
-  }, [data, loaded, loadError, draft]);
+  }, [data, today, allowsWrite, loaded, loadError, draft]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

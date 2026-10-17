@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { StoreProvider } from './lib/store';
 import { TelegramButtonsProvider } from './lib/tgButtons';
+import { Reminder } from './screens/Reminder';
 import { Today } from './screens/Today';
 import { Wizard } from './screens/Wizard';
 
@@ -19,6 +20,7 @@ export function App() {
             <Routes>
               <Route path="/today" element={<Today />} />
               <Route path="/new/:step" element={<Wizard />} />
+              <Route path="/habit/:id/reminder" element={<Reminder />} />
               <Route path="*" element={<Navigate to="/today" replace />} />
             </Routes>
           </div>

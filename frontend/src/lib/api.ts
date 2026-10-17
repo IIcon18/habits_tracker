@@ -41,13 +41,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 interface HabitDto extends Omit<Habit, 'reminder'> {
   marks: { date: ISODate; kind: MarkKind; at: string }[];
-  reminder: (Omit<Reminder, 'time'> & { time: string }) | null;
+  /** Время — «07:45:00». */
+  reminder: Reminder | null;
 }
+
+const reminderFromDto = (r: Reminder): Reminder => ({ ...r, time: r.time.slice(0, 5), eveningTime: r.eveningTime.slice(0, 5) });
 
 function fromDto(dto: HabitDto): { habit: Habit; marks: Mark[] } {
   const { marks, reminder, ...rest } = dto;
   return {
-    habit: { ...rest, reminder: reminder && { ...reminder, time: reminder.time.slice(0, 5) } },
+    habit: { ...rest, reminder: reminder && reminderFromDto(reminder) },
     marks: marks.map((m) => ({ habitId: dto.id, date: m.date, kind: m.kind, at: Date.parse(m.at) })),
   };
 }
@@ -59,7 +62,14 @@ function splitAll(dtos: HabitDto[]): { habits: Habit[]; marks: Mark[] } {
 
 export type HabitInput = Pick<Habit, 'identity' | 'full' | 'mini' | 'anchor'> & { reward?: string | null };
 
+export interface Me {
+  id: number;
+  /** Может ли бот писать: null — ещё не знаем, false — Telegram отказал (экран 8.4). */
+  allowsWrite: boolean | null;
+}
+
 export const api = {
+  me: () => request<Me>('GET', '/me'),
   habits: async () => splitAll(await request<HabitDto[]>('GET', '/habits')),
   create: async (input: HabitInput) => fromDto(await request<HabitDto>('POST', '/habits', input)),
   pause: async (id: string) => fromDto(await request<HabitDto>('POST', `/habits/${id}/pause`)),
@@ -68,6 +78,8 @@ export const api = {
   mark: (id: string, date: ISODate, kind: MarkKind, at: number) =>
     request<unknown>('PUT', `/habits/${id}/marks/${date}`, { kind, at: new Date(at).toISOString() }),
   unmark: (id: string, date: ISODate) => request<void>('DELETE', `/habits/${id}/marks/${date}`),
+  setReminder: async (id: string, reminder: Reminder) =>
+    reminderFromDto(await request<Reminder>('PUT', `/habits/${id}/reminder`, reminder)),
 };
 
 const RETRY_MIN = 1000;

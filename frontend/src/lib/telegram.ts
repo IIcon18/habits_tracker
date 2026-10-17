@@ -43,6 +43,23 @@ export function initTelegram() {
   tg!.onEvent('themeChanged', applyTheme);
 }
 
+/**
+ * Разрешение боту писать (design/07-telegram.md). Если уже разрешено, Telegram отвечает сразу, без окна.
+ * Вне Telegram — для проверки экрана 8.4 в браузере: ?write=deny означает отказ.
+ */
+export function requestWriteAccess(): Promise<boolean> {
+  if (!insideTelegram) return Promise.resolve(new URLSearchParams(location.search).get('write') !== 'deny');
+  // Старый клиент не умеет спрашивать — считаем, что можно: бот сам узнает об отказе при отправке.
+  if (!tg!.isVersionAtLeast('6.9')) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    try {
+      tg!.requestWriteAccess((allowed) => resolve(allowed));
+    } catch {
+      resolve(true);
+    }
+  });
+}
+
 export const haptic = {
   /** На нажатие отметки. */
   tap: () => insideTelegram && safe(() => tg!.HapticFeedback.impactOccurred('light')),
