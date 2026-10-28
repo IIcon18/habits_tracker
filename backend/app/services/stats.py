@@ -29,6 +29,7 @@ class HabitStats:
     days: list[DayState]  # 14 дней, последний — сегодня
     votes: int
     streak: int
+    best_streak: int  # лучшая серия за всё время, включая текущую
     marked_today: bool
     miss_state: MissState
 
@@ -46,12 +47,14 @@ def compute_stats(
         return d < today and tracked(d) and d not in marks
 
     streak = 0
+    best = 0
     miss_run = 0
     d = created_at
     while d < today:
         if tracked(d):
             if d in marks:
                 streak += 1
+                best = max(best, streak)
                 miss_run = 0
             else:
                 miss_run += 1
@@ -62,6 +65,7 @@ def compute_stats(
     marked_today = today in marks
     if marked_today:
         streak += 1
+        best = max(best, streak)
 
     yesterday = today - timedelta(days=1)
     day_before = today - timedelta(days=2)
@@ -84,7 +88,14 @@ def compute_stats(
         else:
             days.append("miss")
 
-    return HabitStats(days=days, votes=len(marks), streak=streak, marked_today=marked_today, miss_state=miss_state)
+    return HabitStats(
+        days=days,
+        votes=len(marks),
+        streak=streak,
+        best_streak=best,
+        marked_today=marked_today,
+        miss_state=miss_state,
+    )
 
 
 def habit_stats(habit: "Habit", today: date) -> HabitStats:

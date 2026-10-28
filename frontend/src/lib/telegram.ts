@@ -4,7 +4,7 @@
  * а тема берётся из ?theme=light|dark, по умолчанию — тёмная.
  */
 
-import type { WebApp } from 'telegram-web-app';
+import type { PopupParams, WebApp } from 'telegram-web-app';
 
 export const tg: WebApp | undefined = window.Telegram?.WebApp;
 
@@ -58,6 +58,26 @@ export function requestWriteAccess(): Promise<boolean> {
       resolve(true);
     }
   });
+}
+
+/**
+ * Системное окно Telegram (design/07-telegram.md, удаление 6.4). Возвращает id нажатой кнопки,
+ * '' — если закрыли. Вне Telegram — для проверки в браузере: confirm() с первой не-«Отмена» кнопкой
+ * типа destructive, а если такой нет — первой.
+ */
+export function showPopup(params: PopupParams & { buttons: NonNullable<PopupParams['buttons']> }): Promise<string> {
+  if (insideTelegram && tg!.isVersionAtLeast('6.2')) {
+    return new Promise((resolve) => {
+      try {
+        tg!.showPopup(params, (id) => resolve(id ?? ''));
+      } catch {
+        resolve('');
+      }
+    });
+  }
+  const action = params.buttons.find((b) => b.type === 'destructive') ?? params.buttons.find((b) => b.type !== 'cancel');
+  const text = [params.title, params.message, action ? `ОК — «${action.text}»` : ''].filter(Boolean).join('\n\n');
+  return Promise.resolve(window.confirm(text) ? (action?.id ?? '') : '');
 }
 
 export const haptic = {

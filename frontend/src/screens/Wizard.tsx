@@ -4,6 +4,7 @@ import { AiSuggestion } from '../components/AiSuggestion';
 import { Chips, Field, PlanPreview, StepProgress } from '../components/Form';
 import { HabitCard } from '../components/HabitCard';
 import { todayISO } from '../lib/date';
+import { ANCHOR_CHIPS, IDENTITY_CHIPS, MINI_PLACEHOLDER, REWARD_CHIPS, REWARD_PLACEHOLDER, STEPS } from '../lib/habitCopy';
 import { computeStats } from '../lib/stats';
 import { useStore, type Draft } from '../lib/store';
 import { haptic } from '../lib/telegram';
@@ -15,18 +16,7 @@ import './Wizard.css';
 
 const TOTAL = 4;
 
-const STEPS = {
-  1: { title: 'Кем ты хочешь стать?', sub: 'Начни с идентичности. Каждая отметка будет голосом за этого человека.' },
-  2: { title: 'Как это выглядит?', sub: 'Полная версия — на хороший день. Версия на две минуты — на любой.' },
-  3: { title: 'После чего?', sub: 'Привяжи к тому, что ты уже делаешь каждый день. Так не придётся вспоминать.' },
-  4: { title: 'Чем себя порадуешь?', sub: 'Необязательно. Маленькая награда сразу после помогает закрепить привычку.' },
-} as const;
-
 type Step = keyof typeof STEPS;
-
-const IDENTITY_CHIPS = ['читает', 'двигается', 'высыпается', 'пишет', 'учит испанский'];
-const ANCHOR_CHIPS = ['проснусь', 'почищу зубы', 'налью утренний кофе', 'сяду в метро', 'закрою ноутбук'];
-const REWARD_CHIPS = ['любимый чай', 'серия сериала', 'кусочек шоколада'];
 
 /** Заполнен ли шаг (шаг 4 — необязательный). */
 function stepDone(step: Step, d: Draft): boolean {
@@ -141,7 +131,7 @@ export function Wizard() {
             <Field label="Полная версия" value={draft.full} onChange={(full) => updateDraft({ full })} />
             <Field
               label="На две минуты"
-              placeholder="Что получится даже в плохой день?"
+              placeholder={MINI_PLACEHOLDER}
               value={draft.mini}
               onChange={(mini) => updateDraft({ mini })}
             />
@@ -166,7 +156,7 @@ export function Wizard() {
           <>
             <Field
               ariaLabel="Награда"
-              placeholder="Например, чашка любимого чая"
+              placeholder={REWARD_PLACEHOLDER}
               value={draft.reward}
               onChange={(reward) => updateDraft({ reward })}
             />

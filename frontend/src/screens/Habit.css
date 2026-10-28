@@ -1,0 +1,150 @@
+/* Экран привычки — screens/6.3. Список — components/List.css. */
+
+.habit {
+  padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
+.habit > .t-screen,
+.habit > .habit__sub {
+  padding: 0 var(--space-1);
+}
+
+.habit__sub {
+  margin-top: var(--space-2);
+  color: var(--ink-muted);
+}
+
+.habit--editor {
+  padding: var(--space-4) var(--space-5) var(--space-6);
+}
+
+.habit--editor > .t-screen,
+.habit--editor > .habit__sub {
+  padding: 0;
+}
+
+.habit__editor-body {
+  margin-top: var(--space-6);
+}
+
+/* Блок «Итог за 30 дней»: карточка с рядом дней. */
+.habit__summary {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.habit__summary-title {
+  margin-bottom: var(--space-3);
+  font: 600 16px/1.35 var(--font-text);
+}
+
+.habit__summary + .list-group,
+.list-group + .list-group {
+  margin-top: var(--space-5);
+}
+
+/* Строка поля: подпись сверху, значение крупнее, справа «›». */
+.field-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-3) 40px var(--space-3) var(--space-4);
+  text-align: left;
+}
+
+.field-row + .field-row {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.field-row::after,
+.list-row--chevron::after {
+  content: '›';
+  position: absolute;
+  right: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-muted);
+  font: 600 18px/1 var(--font-text);
+}
+
+.field-row__label {
+  display: block;
+  color: var(--ink-muted);
+}
+
+.field-row__value {
+  display: block;
+  margin-top: 2px;
+  font: 600 16px/1.35 var(--font-text);
+  overflow-wrap: anywhere;
+}
+
+.field-row__value--empty {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.list-row--chevron {
+  position: relative;
+  padding-right: 40px;
+}
+
+.list-row--danger {
+  color: var(--danger-tg);
+}
+
+.list-row:disabled,
+.field-row:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.field-row:active,
+.list-group > .list-row:not(:disabled):active {
+  background: var(--surface-raised);
+}
+
+/* Лист удаления: пояснение и три действия. Красный — только у «Удалить» (--danger-tg, как строка удаления). */
+.delete-sheet__text {
+  margin-top: var(--space-2);
+  padding: 0 var(--space-1);
+  color: var(--ink-muted);
+}
+
+.delete-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.sheet-action {
+  width: 100%;
+  height: var(--tap-min);
+  border-radius: var(--radius-md);
+}
+
+.sheet-action:active {
+  transform: scale(0.98);
+}
+
+.sheet-action:disabled {
+  opacity: 0.6;
+}
+
+.sheet-action--soft {
+  background: var(--accent-soft);
+  color: var(--on-accent-soft);
+}
+
+.sheet-action--danger {
+  background: var(--surface-sunk);
+  color: var(--danger-tg);
+}
+
+.sheet-action--cancel {
+  color: var(--accent-ink);
+}

@@ -41,3 +41,6 @@ export function timeLabel(at: number): string {
   const d = new Date(at);
   return `${d.getHours()}:${pad(d.getMinutes())}`;
 }
+
+/** «07:45» → «7:45», как в текстах макетов. */
+export const shortTime = (t: string) => t.replace(/^0(\d)/, '$1');

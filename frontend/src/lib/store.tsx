@@ -8,7 +8,7 @@
  * TODO: черновик — в Telegram CloudStorage; отметки без сети — в очередь (экран 9.2).
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { api, watchChanges } from './api';
+import { api, watchChanges, type HabitPatch } from './api';
 import { todayISO, type ISODate } from './date';
 import { loadDemo } from './demo';
 import { haptic, insideTelegram, tg } from './telegram';
@@ -42,6 +42,13 @@ interface Store extends Data {
   mark: (habitId: string, kind: MarkKind) => void;
   undo: (habitId: string) => void;
   resume: (habitId: string) => void;
+  /** Экран привычки (6.3): сохранить поля, поставить на паузу, удалить. Ошибка — исключение. */
+  updateHabit: (habitId: string, patch: HabitPatch) => Promise<void>;
+  pause: (habitId: string) => Promise<void>;
+  removeHabit: (habitId: string) => Promise<void>;
+  /** Несохранённые правки экрана привычки: переживают переход в редактор поля и на экран напоминания. */
+  edits: Record<string, HabitPatch>;
+  setEdits: (habitId: string, patch: HabitPatch | null) => void;
   /** Сохраняет напоминание привычки (экран 6.1). */
   saveReminder: (habitId: string, reminder: Reminder) => Promise<void>;
   /** Может ли бот писать: null — неизвестно (или вне Telegram), false — отказ (экран 8.4). */
@@ -63,6 +70,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [today, setToday] = useState<ISODate>(todayISO);
   const [allowsWrite, setAllowsWrite] = useState<boolean | null>(null);
+  const [edits, setEditsState] = useState<Record<string, HabitPatch>>({});
 
   /** Отметки и отмены, ещё не подтверждённые сервером, и счётчик всех начатых. */
   const pending = useRef(0);
@@ -228,6 +236,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         );
       },
 
+      updateHabit: async (habitId, patch) => {
+        if (demoMode) {
+          setData((d) => ({ ...d, habits: d.habits.map((h) => (h.id === habitId ? { ...h, ...patch } : h)) }));
+          return;
+        }
+        const { habit, marks } = await api.update(habitId, patch);
+        replaceHabit(habit, marks);
+      },
+
+      pause: async (habitId) => {
+        if (demoMode) {
+          setData((d) => ({
+            ...d,
+            habits: d.habits.map((h) =>
+              h.id === habitId ? { ...h, status: 'paused', pauses: [...h.pauses, { start: today, end: null }] } : h,
+            ),
+          }));
+          return;
+        }
+        const { habit, marks } = await api.pause(habitId);
+        replaceHabit(habit, marks);
+      },
+
+      removeHabit: async (habitId) => {
+        if (!demoMode) await api.remove(habitId);
+        setData((d) => ({ habits: d.habits.filter((h) => h.id !== habitId), marks: d.marks.filter((m) => m.habitId !== habitId) }));
+      },
+
+      edits,
+      setEdits: (habitId, patch) =>
+        setEditsState((e) => {
+          const { [habitId]: _, ...rest } = e;
+          return patch ? { ...rest, [habitId]: patch } : rest;
+        }),
+
       saveReminder: async (habitId, reminder) => {
         const saved = demoMode ? reminder : await api.setReminder(habitId, reminder);
         setData((d) => ({ ...d, habits: d.habits.map((h) => (h.id === habitId ? { ...h, reminder: saved } : h)) }));
@@ -264,7 +307,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       resetDraft: () => setDraft(emptyDraft),
     };
-  }, [data, today, allowsWrite, loaded, loadError, draft]);
+  }, [data, today, allowsWrite, edits, loaded, loadError, draft]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

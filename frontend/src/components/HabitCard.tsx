@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { timeLabel } from '../lib/date';
 import { daysWord, votesWord } from '../lib/plural';
 import type { HabitStats } from '../lib/stats';
@@ -22,7 +23,18 @@ export function HabitCard({ habit, stats, justMarked, onMark, onUndo, preview }:
 
   return (
     <article className="habit-card">
-      <h2 className="t-identity">Я человек, который {habit.identity}</h2>
+      <div className="habit-card__head">
+        <h2 className="t-identity">
+          {preview ? (
+            `Я человек, который ${habit.identity}`
+          ) : (
+            <Link className="habit-card__link" to={`/habit/${habit.id}`}>
+              Я человек, который {habit.identity}
+            </Link>
+          )}
+        </h2>
+        {!preview && <EditLink habitId={habit.id} />}
+      </div>
       <p className="habit-card__plan t-body">
         После того как {habit.anchor} — <b>{habit.full}</b>
         <br />
@@ -101,7 +113,14 @@ export function PausedCard({ habit, votes, pausedLabel, onResume }: PausedCardPr
   return (
     <article className="paused-card">
       <div className="paused-card__text">
-        <h3 className="t-identity">Я человек, который {habit.identity}</h3>
+        <div className="habit-card__head">
+          <h3 className="t-identity">
+            <Link className="habit-card__link" to={`/habit/${habit.id}`}>
+              Я человек, который {habit.identity}
+            </Link>
+          </h3>
+          <EditLink habitId={habit.id} />
+        </div>
         <p className="paused-card__meta">
           {pausedLabel}. {votesWord(votes)} и серия сохранены
         </p>
@@ -110,5 +129,23 @@ export function PausedCard({ habit, votes, pausedLabel, onResume }: PausedCardPr
         Вернуть
       </button>
     </article>
+  );
+}
+
+/** Кнопка «Изменить» — карандаш 20px, линейный, как иконка баннера (04-components.md); ведёт на экран привычки. */
+function EditLink({ habitId }: { habitId: string }) {
+  return (
+    <Link className="edit-link" to={`/habit/${habitId}`} aria-label="Изменить привычку">
+      <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
+        <path
+          d="M12.6 4.1 15.9 7.4M3.5 16.5l.7-3.6 9.3-9.3a1.6 1.6 0 0 1 2.3 0l1 1a1.6 1.6 0 0 1 0 2.3l-9.3 9.3-3.6.7Z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
   );
 }

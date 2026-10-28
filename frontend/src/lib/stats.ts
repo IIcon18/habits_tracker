@@ -11,6 +11,8 @@ export interface HabitStats {
   days: DayState[];
   votes: number;
   streak: number;
+  /** Лучшая серия за всё время, включая текущую. */
+  bestStreak: number;
   todayMark?: Mark;
   /** «вчера пропуск» / «два пропуска» — только пока сегодня не отмечено. */
   missState: MissState;
@@ -33,11 +35,13 @@ export function computeStats(habit: Habit, marks: Mark[], today: ISODate): Habit
   const isMiss = (d: ISODate) => d < today && isTracked(d) && !byDate.has(d);
 
   let streak = 0;
+  let best = 0;
   let missRun = 0;
   for (let d = habit.createdAt; d < today; d = addDays(d, 1)) {
     if (!isTracked(d)) continue;
     if (byDate.has(d)) {
       streak += 1;
+      best = Math.max(best, streak);
       missRun = 0;
     } else if (++missRun >= 2) {
       streak = 0;
@@ -45,7 +49,10 @@ export function computeStats(habit: Habit, marks: Mark[], today: ISODate): Habit
   }
 
   const todayKind = byDate.get(today);
-  if (todayKind) streak += 1;
+  if (todayKind) {
+    streak += 1;
+    best = Math.max(best, streak);
+  }
 
   const yesterday = addDays(today, -1);
   const dayBefore = addDays(today, -2);
@@ -67,6 +74,7 @@ export function computeStats(habit: Habit, marks: Mark[], today: ISODate): Habit
     days,
     votes: byDate.size,
     streak,
+    bestStreak: best,
     todayMark: marks.find((m) => m.habitId === habit.id && m.date === today),
     missState,
   };

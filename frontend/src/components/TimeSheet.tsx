@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { haptic } from '../lib/telegram';
+import { BottomSheet } from './BottomSheet';
 import './TimeSheet.css';
 
 /** Высота строки барабана; должна совпадать с --wheel-row в TimeSheet.css. */
@@ -81,35 +82,22 @@ export function TimeSheet({ value, onDone, onClose }: TimeSheetProps) {
   // Время не кратно 5 (например, задано через API) — ближайшее на барабане.
   const [minute, setMinute] = useState(Math.min(11, Math.round(m / 5)));
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   return (
-    <div className="sheet-layer">
-      <div className="sheet-layer__scrim" onClick={onClose} aria-hidden="true" />
-      <section className="sheet" role="dialog" aria-modal="true" aria-labelledby="time-sheet-title">
-        <i className="sheet__grab" aria-hidden="true" />
-        <h2 id="time-sheet-title" className="sheet__title">
-          Время напоминания
-        </h2>
-        <div className="wheel">
-          <Wheel values={HOURS} index={hour} onIndex={setHour} label="часы" />
-          <span className="wheel__colon" aria-hidden="true">
-            :
-          </span>
-          <Wheel values={MINUTES} index={minute} onIndex={setMinute} label="минуты" />
-        </div>
-        <button
-          type="button"
-          className="sheet__done t-button"
-          onClick={() => onDone(`${pad(HOURS[hour])}:${pad(MINUTES[minute])}`)}
-        >
-          Готово
-        </button>
-      </section>
-    </div>
+    <BottomSheet title="Время напоминания" onClose={onClose}>
+      <div className="wheel">
+        <Wheel values={HOURS} index={hour} onIndex={setHour} label="часы" />
+        <span className="wheel__colon" aria-hidden="true">
+          :
+        </span>
+        <Wheel values={MINUTES} index={minute} onIndex={setMinute} label="минуты" />
+      </div>
+      <button
+        type="button"
+        className="sheet__done t-button"
+        onClick={() => onDone(`${pad(HOURS[hour])}:${pad(MINUTES[minute])}`)}
+      >
+        Готово
+      </button>
+    </BottomSheet>
   );
 }

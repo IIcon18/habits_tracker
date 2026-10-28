@@ -1,0 +1,63 @@
+/* BottomSheet — design/04-components.md: --surface, радиус 24px сверху, «ручка» 36×5 --line, затемнение --scrim;
+   выезд 250 мс, затемнение 200 мс (06-motion.md). Листы: время (6.2), удаление привычки. */
+
+.sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.sheet-layer__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: scrim-in 0.2s both;
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px var(--space-4) calc(var(--space-6) + var(--tg-safe-area-inset-bottom, 0px));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface);
+  animation: sheet-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.sheet__grab {
+  display: block;
+  width: 36px;
+  height: 5px;
+  margin: 0 auto 14px;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.sheet__title {
+  padding: 0 var(--space-1);
+  font: 600 18px/1.3 var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet-layer__scrim {
+    animation: none;
+  }
+}

@@ -72,3 +72,21 @@ def test_pause_days_are_not_misses():
     assert s.streak == 4
     assert s.miss_state == "none"
     assert s.days[-7:-2] == ["before"] * 5
+
+
+def test_best_streak_survives_reset():
+    # Серия 4 → два пропуска обнулили → сейчас 2 (+ сегодня 3); лучшая остаётся 4.
+    start, marks = habit("ddxddxxdd", today_kind="full")
+    s = compute_stats(start, marks, [], TODAY)
+    assert (s.streak, s.best_streak) == (3, 4)
+
+
+def test_best_streak_is_current_when_growing():
+    start, marks = habit("dddddd", today_kind="mini")
+    s = compute_stats(start, marks, [], TODAY)
+    assert s.streak == s.best_streak == 7
+
+
+def test_best_streak_zero_without_marks():
+    start, marks = habit("xxx")
+    assert compute_stats(start, marks, [], TODAY).best_streak == 0

@@ -12,7 +12,9 @@ npm run build      # проверка типов + сборка в dist/
 - `?theme=light` — светлая тема (в Telegram тема берётся из `colorScheme`);
 - `?demo=paused` — экран 1.4, `?demo=two` — два пропуска подряд, `?demo=new` — новая привычка.
 
-Маршруты (HashRouter): `#/today` — «Сегодня», `#/new/1…4` — мастер создания.
+Маршруты (HashRouter): `#/today` — «Сегодня», `#/new/1…4` — мастер создания, `#/habit/:id` — экран привычки
+(6.3, вход — карандаш или идентичность на карточке), `#/habit/:id/reminder` — напоминание (6.1). В демо id привычек — `read` и `move`.
+Удаление — нижний лист приложения; `?write=deny` — отказ в разрешении писать (экран 8.4).
 
 Системные кнопки Telegram объявляются хуками `useMainButton` / `useSecondaryButton` / `useBackButton`
 (`src/lib/tgButtons.tsx`). Вне Telegram MainButton и SecondaryButton имитирует нижняя панель —

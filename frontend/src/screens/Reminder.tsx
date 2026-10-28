@@ -2,10 +2,12 @@ import { useState, type ReactNode } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router';
 import { daysLabel, Toggle, WeekdayPicker } from '../components/Controls';
 import { TimeSheet } from '../components/TimeSheet';
+import { shortTime } from '../lib/date';
 import { useStore } from '../lib/store';
 import { haptic, requestWriteAccess } from '../lib/telegram';
 import { useBackButton, useMainButton } from '../lib/tgButtons';
 import type { Habit, Reminder as ReminderSettings } from '../lib/types';
+import '../components/List.css';
 import './Reminder.css';
 
 /**
@@ -25,8 +27,7 @@ const DEFAULT: ReminderSettings = {
 
 const QUICK_TIMES = ['07:00', '07:30', '07:45', '08:00', '08:30'];
 
-/** «07:45» → «7:45», как в текстах макета. */
-const short = (t: string) => t.replace(/^0(\d)/, '$1');
+const short = shortTime;
 
 /** Почему нельзя сохранить; null — можно. */
 function problem(r: ReminderSettings): string | null {

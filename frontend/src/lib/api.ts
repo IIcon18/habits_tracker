@@ -61,6 +61,8 @@ function splitAll(dtos: HabitDto[]): { habits: Habit[]; marks: Mark[] } {
 }
 
 export type HabitInput = Pick<Habit, 'identity' | 'full' | 'mini' | 'anchor'> & { reward?: string | null };
+/** Только изменённые поля; reward: null — убрать награду. */
+export type HabitPatch = Partial<HabitInput>;
 
 export interface Me {
   id: number;
@@ -72,6 +74,7 @@ export const api = {
   me: () => request<Me>('GET', '/me'),
   habits: async () => splitAll(await request<HabitDto[]>('GET', '/habits')),
   create: async (input: HabitInput) => fromDto(await request<HabitDto>('POST', '/habits', input)),
+  update: async (id: string, patch: HabitPatch) => fromDto(await request<HabitDto>('PATCH', `/habits/${id}`, patch)),
   pause: async (id: string) => fromDto(await request<HabitDto>('POST', `/habits/${id}/pause`)),
   resume: async (id: string) => fromDto(await request<HabitDto>('POST', `/habits/${id}/resume`)),
   remove: (id: string) => request<void>('DELETE', `/habits/${id}`),
